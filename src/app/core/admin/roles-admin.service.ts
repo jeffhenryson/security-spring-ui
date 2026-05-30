@@ -1,45 +1,65 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { ApiConfiguration } from '../../api/api-configuration';
+import { RoleResponse } from '../../api/models/role-response';
+import { PagedResponse } from './paged-state';
+import { ListAllLoader } from './list-all-loader';
 
-export interface Role { name: string; permissions: string[]; }
-export interface Page<T> { content: T[]; totalElements: number; }
+export type { RoleResponse };
 
 @Injectable({ providedIn: 'root' })
 export class RolesAdminService {
   private readonly http = inject(HttpClient);
-  private readonly api = environment.apiUrl;
+  private readonly config = inject(ApiConfiguration);
+  private readonly allLoader: ListAllLoader<RoleResponse>;
 
-  list(page: number, size: number): Promise<Page<Role>> {
+  constructor() {
+    this.allLoader = new ListAllLoader(this.http, `${this.config.rootUrl}/roles`);
+  }
+
+  list(page: number, size: number, search = ''): Promise<PagedResponse<RoleResponse>> {
+    const params: Record<string, string> = { page: String(page), size: String(size) };
+    if (search) params['search'] = search;
     return firstValueFrom(
-      this.http.get<Page<Role>>(`${this.api}/roles?page=${page}&size=${size}`)
+      this.http.get<PagedResponse<RoleResponse>>(`${this.config.rootUrl}/roles`, { params }),
     );
   }
 
-  listAll(): Promise<Role[]> {
-    return firstValueFrom(
-      this.http.get<Page<Role>>(`${this.api}/roles?page=0&size=1000`)
-    ).then(r => r.content);
+  listAll(): Promise<RoleResponse[]> {
+    return this.allLoader.load();
   }
 
-  create(name: string): Promise<Role> {
-    return firstValueFrom(this.http.post<Role>(`${this.api}/roles`, { name }));
+  invalidateCache(): void {
+    this.allLoader.invalidate();
+  }
+
+  create(name: string): Promise<RoleResponse> {
+    this.invalidateCache();
+    return firstValueFrom(
+      this.http.post<RoleResponse>(`${this.config.rootUrl}/roles`, { name }),
+    );
   }
 
   remove(name: string): Promise<void> {
-    return firstValueFrom(this.http.delete<void>(`${this.api}/roles/${name}`));
+    this.invalidateCache();
+    return firstValueFrom(this.http.delete<void>(`${this.config.rootUrl}/roles/${name}`));
   }
 
   addPermission(roleName: string, permName: string): Promise<void> {
     return firstValueFrom(
-      this.http.post<void>(`${this.api}/roles/${roleName}/permissions/${permName}`, {})
+      this.http.post<void>(
+        `${this.config.rootUrl}/roles/${roleName}/permissions/${permName}`,
+        {},
+      ),
     );
   }
 
   removePermission(roleName: string, permName: string): Promise<void> {
     return firstValueFrom(
-      this.http.delete<void>(`${this.api}/roles/${roleName}/permissions/${permName}`)
+      this.http.delete<void>(
+        `${this.config.rootUrl}/roles/${roleName}/permissions/${permName}`,
+      ),
     );
   }
 }

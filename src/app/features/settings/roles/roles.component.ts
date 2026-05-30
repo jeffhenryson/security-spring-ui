@@ -1,12 +1,11 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
-import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { firstValueFrom, debounceTime, distinctUntilChanged } from 'rxjs';
+import { MatDialog } from '@angular/material/dialog';
 import { MatTableModule } from '@angular/material/table';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSelectModule } from '@angular/material/select';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -15,340 +14,270 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AuthStore } from '../../../core/auth/auth.store';
+import { PermissionsAdminService } from '../../../core/admin/permissions-admin.service';
+import { RolesAdminService, RoleResponse as Role } from '../../../core/admin/roles-admin.service';
+import { runWithFeedback, httpErrMsg } from '../../../core/admin/admin-feedback';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
-import { environment } from '../../../../environments/environment';
+import { EmptyStateComponent } from '../../../shared/empty-state/empty-state.component';
+import { PagedState } from '../../../core/admin/paged-state';
+import { PERMISSIONS } from '../../../core/rbac/permissions.constants';
+import { CreateRoleDialogComponent } from './dialogs/create-role.dialog';
+import { ManageRolePermissionsDialogComponent } from './dialogs/manage-role-permissions.dialog';
 
-interface Role { name: string; permissions: string[]; }
-interface Page<T> { content: T[]; totalElements: number; }
-
-// ── Dialog: criar role ──────────────────────────────────────────────────────
-@Component({
-  selector: 'app-create-role-dialog',
-  standalone: true,
-  imports: [ReactiveFormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule, MatInputModule],
-  template: `
-    <h2 mat-dialog-title>Nova role</h2>
-    <mat-dialog-content>
-      <form [formGroup]="form" id="createRoleForm" (ngSubmit)="submit()" class="pt-2">
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Nome da role</mat-label>
-          <input matInput formControlName="name" placeholder="Ex: MODERATOR" />
-          @if (form.get('name')?.hasError('required') && form.get('name')?.touched) {
-            <mat-error>Campo obrigatório</mat-error>
-          }
-        </mat-form-field>
-      </form>
-    </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <button mat-stroked-button [mat-dialog-close]="null">Cancelar</button>
-      <button mat-flat-button form="createRoleForm" type="submit" [disabled]="form.invalid">Criar</button>
-    </mat-dialog-actions>
-  `,
-})
-export class CreateRoleDialogComponent {
-  readonly dialogRef = inject(MatDialogRef<CreateRoleDialogComponent>);
-  private readonly fb = inject(FormBuilder);
-  readonly form = this.fb.nonNullable.group({ name: ['', Validators.required] });
-  submit(): void {
-    if (this.form.valid) this.dialogRef.close(this.form.getRawValue().name);
-  }
-}
-
-// ── Dialog: gerenciar permissões de uma role ────────────────────────────────
-@Component({
-  selector: 'app-manage-role-permissions-dialog',
-  standalone: true,
-  imports: [
-    ReactiveFormsModule, MatDialogModule, MatButtonModule,
-    MatFormFieldModule, MatSelectModule, MatChipsModule,
-    MatIconModule, MatProgressSpinnerModule,
-  ],
-  template: `
-    <h2 mat-dialog-title>Permissões — {{ data.role.name }}</h2>
-    <mat-dialog-content class="!min-w-[400px]">
-
-      <p class="text-slate-400 text-sm mb-3 m-0">Permissões atribuídas:</p>
-      <mat-chip-set class="mb-4 flex flex-wrap gap-1">
-        @if (role().permissions.length === 0) {
-          <span class="text-slate-500 text-sm">Nenhuma permissão</span>
-        }
-        @for (perm of role().permissions; track perm) {
-          <mat-chip [removable]="canManage()" (removed)="removePerm(perm)">
-            {{ perm }}
-            @if (canManage()) {
-              <button matChipRemove><mat-icon>cancel</mat-icon></button>
-            }
-          </mat-chip>
-        }
-      </mat-chip-set>
-
-      @if (canManage()) {
-        <div class="flex items-center gap-2 pt-2">
-          <mat-form-field appearance="outline" class="flex-1 !pb-0">
-            <mat-label>Adicionar permissão</mat-label>
-            <mat-select [value]="selectedPerm()"
-                        (selectionChange)="selectedPerm.set($event.value)">
-              @for (p of availablePerms(); track p) {
-                <mat-option [value]="p">{{ p }}</mat-option>
-              }
-              @if (availablePerms().length === 0) {
-                <mat-option disabled>Todas as permissões já atribuídas</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-          <button mat-flat-button
-                  (click)="addPerm()"
-                  [disabled]="!selectedPerm() || adding()">
-            @if (adding()) { <mat-spinner diameter="18" /> } @else { Adicionar }
-          </button>
-        </div>
-      }
-
-    </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <button mat-stroked-button [mat-dialog-close]="null">Fechar</button>
-    </mat-dialog-actions>
-  `,
-})
-export class ManageRolePermissionsDialogComponent implements OnInit {
-  readonly dialogRef = inject(MatDialogRef<ManageRolePermissionsDialogComponent>);
-  readonly data: { role: Role } = inject(MAT_DIALOG_DATA);
-  private readonly http = inject(HttpClient);
-  private readonly store = inject(AuthStore);
-  private readonly snackBar = inject(MatSnackBar);
-  private readonly api = environment.apiUrl;
-
-  readonly role = signal<Role>({ ...this.data.role, permissions: [...this.data.role.permissions] });
-  readonly allPermissions = signal<string[]>([]);
-  readonly selectedPerm = signal('');
-  readonly adding = signal(false);
-
-  readonly canManage = computed(() => this.store.hasPermission('ROLE_MANAGE_PERMISSIONS'));
-  readonly availablePerms = computed(() =>
-    this.allPermissions().filter(p => !this.role().permissions.includes(p))
-  );
-
-  ngOnInit(): void { this.loadAllPermissions(); }
-
-  private async loadAllPermissions(): Promise<void> {
-    try {
-      const res = await firstValueFrom(
-        this.http.get<Page<{ name: string }>>(`${this.api}/permissions?page=0&size=1000`)
-      );
-      this.allPermissions.set(res.content.map(p => p.name));
-    } catch { /* silencioso */ }
-  }
-
-  async addPerm(): Promise<void> {
-    const perm = this.selectedPerm();
-    if (!perm) return;
-    this.adding.set(true);
-    try {
-      await firstValueFrom(
-        this.http.post(`${this.api}/roles/${this.role().name}/permissions/${perm}`, {})
-      );
-      this.role.update(r => ({ ...r, permissions: [...r.permissions, perm] }));
-      this.selectedPerm.set('');
-      this.snackBar.open('Permissão adicionada!', 'OK', { duration: 2000 });
-    } catch {
-      this.snackBar.open('Erro ao adicionar permissão.', 'OK', { duration: 3000 });
-    } finally {
-      this.adding.set(false);
-    }
-  }
-
-  async removePerm(perm: string): Promise<void> {
-    try {
-      await firstValueFrom(
-        this.http.delete(`${this.api}/roles/${this.role().name}/permissions/${perm}`)
-      );
-      this.role.update(r => ({ ...r, permissions: r.permissions.filter(p => p !== perm) }));
-      this.snackBar.open('Permissão removida.', 'OK', { duration: 2000 });
-    } catch {
-      this.snackBar.open('Erro ao remover permissão.', 'OK', { duration: 3000 });
-    }
-  }
-}
-
-// ── Componente principal ────────────────────────────────────────────────────
 @Component({
   selector: 'app-roles',
   standalone: true,
   imports: [
-    MatTableModule, MatPaginatorModule, MatButtonModule,
-    MatIconModule, MatChipsModule, MatProgressSpinnerModule, MatTooltipModule,
+    ReactiveFormsModule,
+    MatTableModule,
+    MatPaginatorModule,
+    MatButtonModule,
+    MatIconModule,
+    MatChipsModule,
+    MatProgressSpinnerModule,
+    MatTooltipModule,
+    MatFormFieldModule,
+    MatInputModule,
+    EmptyStateComponent,
   ],
   template: `
     <div class="p-6 max-w-4xl mx-auto flex flex-col gap-6">
-
       <div class="flex items-center justify-between">
-        <h3 class="text-base font-semibold text-slate-200 m-0">Roles</h3>
+        <h3 class="text-base font-semibold text-[var(--text-primary)] m-0">Roles</h3>
         @if (canCreate()) {
-          <button mat-flat-button (click)="openCreate()">
-            <mat-icon>add</mat-icon> Nova role
-          </button>
+          <button mat-flat-button (click)="openCreate()"><mat-icon>add</mat-icon> Nova role</button>
         }
       </div>
 
-      <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-        @if (loading()) {
-          <div class="flex justify-center py-12"><mat-spinner diameter="32" /></div>
-        } @else if (rows().length === 0) {
-          <p class="text-slate-500 text-sm text-center py-12 m-0">Nenhuma role cadastrada.</p>
+      <!-- Busca -->
+      <mat-form-field appearance="outline" class="w-full !pb-0">
+        <mat-label>Buscar por nome</mat-label>
+        <mat-icon matPrefix class="!text-[var(--text-secondary)]">search</mat-icon>
+        <input matInput [formControl]="searchControl" />
+      </mat-form-field>
+
+      <div
+        class="bg-[var(--surface-color)] border border-[var(--border-color)] rounded-xl overflow-hidden"
+      >
+        @if (paged.loading()) {
+          <div class="divide-y divide-[var(--border-color)]">
+            @for (i of skeletonRows; track i) {
+              <div class="flex items-center gap-4 px-6 py-4">
+                <div class="skeleton h-4 w-32 rounded"></div>
+                <div class="flex gap-2 ml-6">
+                  <div class="skeleton h-5 w-16 rounded-full"></div>
+                  <div class="skeleton h-5 w-20 rounded-full"></div>
+                </div>
+                <div class="skeleton h-4 w-16 rounded ml-auto"></div>
+              </div>
+            }
+          </div>
+        } @else if (paged.rows().length === 0) {
+          <app-empty-state message="Nenhuma role cadastrada." icon="admin_panel_settings" />
         } @else {
           <div class="overflow-x-auto">
-          <table mat-table [dataSource]="rows()" class="w-full">
+            <table mat-table [dataSource]="paged.rows()" class="w-full" aria-label="Tabela de roles">
+              <ng-container matColumnDef="name">
+                <th
+                  mat-header-cell
+                  *matHeaderCellDef
+                  class="!text-[var(--text-secondary)] !text-xs !pl-6"
+                >
+                  Nome
+                </th>
+                <td
+                  mat-cell
+                  *matCellDef="let r"
+                  class="!text-[var(--text-primary)] !font-medium !pl-6"
+                >
+                  {{ r.name }}
+                </td>
+              </ng-container>
 
-            <ng-container matColumnDef="name">
-              <th mat-header-cell *matHeaderCellDef class="!text-slate-400 !text-xs !pl-6">Nome</th>
-              <td mat-cell *matCellDef="let r" class="!text-slate-200 !font-medium !pl-6">{{ r.name }}</td>
-            </ng-container>
+              <ng-container matColumnDef="permissions">
+                <th
+                  mat-header-cell
+                  *matHeaderCellDef
+                  class="!text-[var(--text-secondary)] !text-xs"
+                >
+                  Permissões
+                </th>
+                <td mat-cell *matCellDef="let r" class="!py-2">
+                  @if (r.permissions.length === 0) {
+                    <span class="text-[var(--text-muted)] text-xs">Nenhuma</span>
+                  } @else {
+                    <mat-chip-set>
+                      @for (p of r.permissions.slice(0, 4); track p) {
+                        <mat-chip class="!text-xs">{{ p }}</mat-chip>
+                      }
+                      @if (r.permissions.length > 4) {
+                        <mat-chip
+                          class="!text-xs bg-[var(--surface-hover)]"
+                          [matTooltip]="r.permissions.slice(4).join(', ')"
+                        >
+                          +{{ r.permissions.length - 4 }}
+                        </mat-chip>
+                      }
+                    </mat-chip-set>
+                  }
+                </td>
+              </ng-container>
 
-            <ng-container matColumnDef="permissions">
-              <th mat-header-cell *matHeaderCellDef class="!text-slate-400 !text-xs">Permissões</th>
-              <td mat-cell *matCellDef="let r" class="!py-2">
-                @if (r.permissions.length === 0) {
-                  <span class="text-slate-500 text-xs">Nenhuma</span>
-                } @else {
-                  <mat-chip-set>
-                    @for (p of r.permissions.slice(0, 4); track p) {
-                      <mat-chip class="!text-xs">{{ p }}</mat-chip>
-                    }
-                    @if (r.permissions.length > 4) {
-                      <mat-chip class="!text-xs !bg-slate-700"
-                                [matTooltip]="r.permissions.slice(4).join(', ')">
-                        +{{ r.permissions.length - 4 }}
-                      </mat-chip>
-                    }
-                  </mat-chip-set>
-                }
-              </td>
-            </ng-container>
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef class="!text-right !pr-4"></th>
+                <td mat-cell *matCellDef="let r" class="!text-right !pr-2 whitespace-nowrap">
+                  @if (canManagePermissions()) {
+                    <button
+                      mat-icon-button
+                      (click)="openManagePermissions(r)"
+                      class="!text-[var(--text-secondary)] hover:!text-cyan-400"
+                      [matTooltip]="'Gerenciar permissões'"
+                    >
+                      <mat-icon>key</mat-icon>
+                    </button>
+                  }
+                  @if (canDelete()) {
+                    <button
+                      mat-icon-button
+                      (click)="delete(r)"
+                      class="!text-[var(--text-secondary)] hover:!text-red-400"
+                      [attr.aria-label]="'Excluir ' + r.name"
+                    >
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  }
+                </td>
+              </ng-container>
 
-            <ng-container matColumnDef="actions">
-              <th mat-header-cell *matHeaderCellDef class="!text-right !pr-4"></th>
-              <td mat-cell *matCellDef="let r" class="!text-right !pr-2 whitespace-nowrap">
-                @if (canManagePermissions()) {
-                  <button mat-icon-button (click)="openManagePermissions(r)"
-                          class="!text-slate-400 hover:!text-cyan-400"
-                          [matTooltip]="'Gerenciar permissões'">
-                    <mat-icon>key</mat-icon>
-                  </button>
-                }
-                @if (canDelete()) {
-                  <button mat-icon-button (click)="delete(r)"
-                          class="!text-slate-400 hover:!text-red-400">
-                    <mat-icon>delete</mat-icon>
-                  </button>
-                }
-              </td>
-            </ng-container>
-
-            <tr mat-header-row *matHeaderRowDef="cols"></tr>
-            <tr mat-row *matRowDef="let row; columns: cols;"
-                class="hover:!bg-slate-800/50 transition-colors"></tr>
-          </table>
+              <tr mat-header-row *matHeaderRowDef="cols"></tr>
+              <tr
+                mat-row
+                *matRowDef="let row; columns: cols"
+                class="hover:bg-[var(--surface-hover)] transition-colors"
+              ></tr>
+            </table>
           </div>
           <mat-paginator
-            [length]="total()"
-            [pageSize]="size()"
+            [length]="paged.total()"
+            [pageSize]="paged.size()"
             [pageSizeOptions]="[10, 25, 50]"
             (page)="onPage($event)"
-            class="border-t border-slate-800" />
+            class="border-t border-[var(--border-color)]"
+          />
         }
       </div>
     </div>
   `,
 })
 export class RolesComponent implements OnInit {
-  private readonly http = inject(HttpClient);
+  private readonly rolesService = inject(RolesAdminService);
+  private readonly permissionsService = inject(PermissionsAdminService);
   private readonly store = inject(AuthStore);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
-  private readonly api = environment.apiUrl;
+  private readonly fb = inject(FormBuilder);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly cols = ['name', 'permissions', 'actions'];
-  readonly rows = signal<Role[]>([]);
-  readonly total = signal(0);
-  readonly page = signal(0);
-  readonly size = signal(10);
-  readonly loading = signal(true);
+  readonly paged = new PagedState<Role>();
+  readonly allPermissions = signal<string[]>([]);
+  readonly skeletonRows = Array(6).fill(0);
+  readonly searchControl = this.fb.control('');
 
-  readonly canCreate = computed(() => this.store.hasPermission('ROLE_CREATE'));
-  readonly canDelete = computed(() => this.store.hasPermission('ROLE_DELETE'));
-  readonly canManagePermissions = computed(() => this.store.hasPermission('ROLE_MANAGE_PERMISSIONS'));
+  readonly canCreate = computed(() => this.store.hasPermission(PERMISSIONS.ROLE_CREATE));
+  readonly canDelete = computed(() => this.store.hasPermission(PERMISSIONS.ROLE_DELETE));
+  readonly canManagePermissions = computed(() =>
+    this.store.hasPermission(PERMISSIONS.ROLE_MANAGE_PERMISSIONS),
+  );
 
-  ngOnInit(): void { this.load(); }
+  ngOnInit(): void {
+    this.load();
+    this.loadPermissions();
+    this.searchControl.valueChanges
+      .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.paged.page.set(0);
+        this.load();
+      });
+  }
 
-  private async load(): Promise<void> {
-    this.loading.set(true);
+  private async loadPermissions(): Promise<void> {
     try {
-      const res = await firstValueFrom(
-        this.http.get<Page<Role>>(`${this.api}/roles?page=${this.page()}&size=${this.size()}`)
-      );
-      this.rows.set(res.content);
-      this.total.set(res.totalElements);
+      const perms = await this.permissionsService.listAll();
+      this.allPermissions.set(perms.map((p) => p.name));
     } catch {
-      this.snackBar.open('Erro ao carregar roles.', 'OK', { duration: 3000 });
-    } finally {
-      this.loading.set(false);
+      /* silencioso — lista de permissões é auxiliar */
     }
   }
 
-  onPage(e: PageEvent): void {
-    this.page.set(e.pageIndex);
-    this.size.set(e.pageSize);
+  private async load(): Promise<void> {
+    this.paged.loading.set(true);
+    const search = this.searchControl.value?.trim() ?? '';
+    try {
+      const res = await this.rolesService.list(this.paged.page(), this.paged.size(), search);
+      this.paged.apply(res);
+    } catch {
+      this.snackBar.open('Erro ao carregar roles.', 'OK', { duration: 3000 });
+    } finally {
+      this.paged.loading.set(false);
+    }
+  }
+
+  onPage(e: import('@angular/material/paginator').PageEvent): void {
+    this.paged.onPage(e);
     this.load();
   }
 
   async openCreate(): Promise<void> {
     const name = await firstValueFrom(
-      this.dialog.open(CreateRoleDialogComponent, { width: 'min(400px, 95vw)' }).afterClosed()
+      this.dialog.open(CreateRoleDialogComponent, { width: 'min(400px, 95vw)' }).afterClosed(),
     );
     if (!name) return;
-    try {
-      await firstValueFrom(this.http.post(`${this.api}/roles`, { name }));
-      this.page.set(0);
+    const ok = await runWithFeedback(
+      () => this.rolesService.create(name),
+      'Role criada!',
+      httpErrMsg('Role já existe.', 'Erro ao criar role.'),
+      this.snackBar,
+    );
+    if (ok) {
+      this.paged.page.set(0);
       await this.load();
-      this.snackBar.open('Role criada!', 'OK', { duration: 3000 });
-    } catch (err: any) {
-      if (err?.status === 409) {
-        this.snackBar.open('Role já existe.', 'OK', { duration: 3000 });
-      } else {
-        this.snackBar.open('Erro ao criar role.', 'OK', { duration: 3000 });
-      }
     }
   }
 
   async openManagePermissions(role: Role): Promise<void> {
     await firstValueFrom(
-      this.dialog.open(ManageRolePermissionsDialogComponent, {
-        width: 'min(520px, 95vw)',
-        data: { role },
-      }).afterClosed()
+      this.dialog
+        .open(ManageRolePermissionsDialogComponent, {
+          width: 'min(520px, 95vw)',
+          data: { role, allPermissions: this.allPermissions() },
+        })
+        .afterClosed(),
     );
     await this.load();
   }
 
   async delete(role: Role): Promise<void> {
-    const ok = await firstValueFrom(
-      this.dialog.open(ConfirmDialogComponent, {
-        width: 'min(400px, 95vw)',
-        data: {
-          title: 'Excluir role',
-          message: `Excluir a role "${role.name}"? Usuários com esta role serão afetados.`,
-          confirmLabel: 'Excluir',
-          danger: true,
-        },
-      }).afterClosed()
+    const confirmed = await firstValueFrom(
+      this.dialog
+        .open(ConfirmDialogComponent, {
+          width: 'min(400px, 95vw)',
+          data: {
+            title: 'Excluir role',
+            message: `Excluir a role "${role.name}"? Usuários com esta role serão afetados.`,
+            confirmLabel: 'Excluir',
+            danger: true,
+          },
+        })
+        .afterClosed(),
     );
-    if (!ok) return;
-    try {
-      await firstValueFrom(this.http.delete(`${this.api}/roles/${role.name}`));
-      await this.load();
-      this.snackBar.open('Role excluída.', 'OK', { duration: 3000 });
-    } catch {
-      this.snackBar.open('Erro ao excluir role.', 'OK', { duration: 3000 });
-    }
+    if (!confirmed) return;
+    const ok = await runWithFeedback(
+      () => this.rolesService.remove(role.name),
+      'Role excluída.',
+      'Erro ao excluir role.',
+      this.snackBar,
+    );
+    if (ok !== null) await this.load();
   }
 }

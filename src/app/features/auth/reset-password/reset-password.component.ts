@@ -1,19 +1,13 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
-import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { environment } from '../../../../environments/environment';
-
-function passwordMatch(control: AbstractControl): ValidationErrors | null {
-  const password = control.get('newPassword')?.value;
-  const confirm = control.get('confirmPassword')?.value;
-  return password === confirm ? null : { passwordMismatch: true };
-}
+import { AuthService } from '../../../core/auth/auth.service';
+import { passwordMatchValidator } from '../../../core/validators/password.validators';
+import { PasswordStrengthComponent } from '../../../shared/password-strength/password-strength.component';
 
 @Component({
   selector: 'app-reset-password',
@@ -25,24 +19,29 @@ function passwordMatch(control: AbstractControl): ValidationErrors | null {
     MatInputModule,
     MatButtonModule,
     MatProgressSpinnerModule,
+    PasswordStrengthComponent,
   ],
   template: `
-    <div class="min-h-screen flex items-center justify-center bg-gray-950">
-      <div class="w-full max-w-sm p-8 bg-slate-900 rounded-2xl border border-slate-700 shadow-2xl">
+    <div class="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
+      <div class="w-full max-w-sm p-8 bg-[var(--surface-color)] rounded-2xl border border-[var(--border-color)] shadow-2xl">
         <div class="mb-8 text-center">
-          <h1 class="text-2xl font-bold text-cyan-400 mb-1">Nova senha</h1>
-          <p class="text-slate-400 text-sm">Defina sua nova senha</p>
+          <h1 class="text-2xl font-bold text-[var(--active-color)] mb-1">Nova senha</h1>
+          <p class="text-[var(--text-secondary)] text-sm">Defina sua nova senha</p>
         </div>
 
         @if (success()) {
-          <div class="p-4 bg-slate-800 rounded-lg border border-emerald-400 text-emerald-400 text-sm text-center mb-4">
+          <div
+            class="p-4 bg-[var(--surface-hover)] rounded-lg border border-emerald-400 text-emerald-400 text-sm text-center mb-4"
+          >
             Senha redefinida com sucesso!
           </div>
           <div class="text-center">
             <a routerLink="/auth/login" mat-flat-button>Ir para o login</a>
           </div>
         } @else if (tokenMissing()) {
-          <div class="p-4 bg-slate-800 rounded-lg border border-red-500 text-red-400 text-sm text-center mb-4">
+          <div
+            class="p-4 bg-[var(--surface-hover)] rounded-lg border border-red-500 text-red-400 text-sm text-center mb-4"
+          >
             Link inválido ou expirado. Solicite uma nova recuperação de senha.
           </div>
           <div class="text-center">
@@ -52,15 +51,28 @@ function passwordMatch(control: AbstractControl): ValidationErrors | null {
           <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
             <mat-form-field appearance="outline">
               <mat-label>Nova senha</mat-label>
-              <input matInput type="password" formControlName="newPassword" autocomplete="new-password" />
-              @if (form.get('newPassword')?.hasError('minlength') && form.get('newPassword')?.touched) {
+              <input
+                matInput
+                type="password"
+                formControlName="newPassword"
+                autocomplete="new-password"
+              />
+              @if (
+                form.get('newPassword')?.hasError('minlength') && form.get('newPassword')?.touched
+              ) {
                 <mat-error>Mínimo 6 caracteres</mat-error>
               }
             </mat-form-field>
+            <app-password-strength [password]="form.get('newPassword')?.value ?? null" />
 
             <mat-form-field appearance="outline">
               <mat-label>Confirmar senha</mat-label>
-              <input matInput type="password" formControlName="confirmPassword" autocomplete="new-password" />
+              <input
+                matInput
+                type="password"
+                formControlName="confirmPassword"
+                autocomplete="new-password"
+              />
             </mat-form-field>
 
             <!-- Erro de grupo fica fora do mat-form-field — passwordMismatch é erro do FormGroup, não do control -->
@@ -72,7 +84,12 @@ function passwordMatch(control: AbstractControl): ValidationErrors | null {
               <p class="text-red-400 text-sm text-center">{{ errorMsg() }}</p>
             }
 
-            <button mat-flat-button type="submit" [disabled]="loading() || form.invalid" class="w-full mt-2">
+            <button
+              mat-flat-button
+              type="submit"
+              [disabled]="loading() || form.invalid"
+              class="w-full mt-2"
+            >
               @if (loading()) {
                 <mat-spinner diameter="20" class="inline" />
               } @else {
@@ -88,7 +105,7 @@ function passwordMatch(control: AbstractControl): ValidationErrors | null {
 export class ResetPasswordComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly fb = inject(FormBuilder);
-  private readonly http = inject(HttpClient);
+  private readonly authService = inject(AuthService);
 
   private token = '';
   readonly loading = signal(false);
@@ -96,10 +113,13 @@ export class ResetPasswordComponent implements OnInit {
   readonly tokenMissing = signal(false);
   readonly errorMsg = signal('');
 
-  readonly form = this.fb.nonNullable.group({
-    newPassword: ['', [Validators.required, Validators.minLength(6)]],
-    confirmPassword: ['', Validators.required],
-  }, { validators: passwordMatch });
+  readonly form = this.fb.nonNullable.group(
+    {
+      newPassword: ['', [Validators.required, Validators.minLength(6)]],
+      confirmPassword: ['', Validators.required],
+    },
+    { validators: passwordMatchValidator },
+  );
 
   ngOnInit(): void {
     this.token = this.route.snapshot.queryParamMap.get('token') ?? '';
@@ -111,12 +131,7 @@ export class ResetPasswordComponent implements OnInit {
     this.loading.set(true);
     this.errorMsg.set('');
     try {
-      await firstValueFrom(
-        this.http.post(`${environment.apiUrl}/auth/reset-password`, {
-          token: this.token,
-          newPassword: this.form.getRawValue().newPassword,
-        })
-      );
+      await this.authService.resetPassword(this.token, this.form.getRawValue().newPassword);
       this.success.set(true);
     } catch {
       this.errorMsg.set('Token inválido ou expirado.');

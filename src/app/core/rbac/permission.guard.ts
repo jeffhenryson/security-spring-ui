@@ -1,5 +1,5 @@
 import { inject } from '@angular/core';
-import { CanActivateFn, Router } from '@angular/router';
+import { CanActivateFn, CanMatchFn, Router } from '@angular/router';
 import { AuthStore } from '../auth/auth.store';
 
 export const authGuard: CanActivateFn = () => {
@@ -16,10 +16,14 @@ export const alreadyAuthGuard: CanActivateFn = () => {
   return true;
 };
 
-export const permissionGuard = (permission: string): CanActivateFn => () => {
-  const store = inject(AuthStore);
-  const router = inject(Router);
-  if (!store.isAuthenticated()) return router.createUrlTree(['/auth/login']);
-  if (store.hasPermission(permission)) return true;
-  return router.createUrlTree(['/app/dashboard']);
-};
+// canMatch: o bundle da rota só é baixado se o guard passar,
+// reduzindo o download de código para usuários sem a permissão.
+export const permissionGuard =
+  (permission: string): CanMatchFn =>
+  () => {
+    const store = inject(AuthStore);
+    const router = inject(Router);
+    if (!store.isAuthenticated()) return router.createUrlTree(['/auth/login']);
+    if (store.hasPermission(permission)) return true;
+    return router.createUrlTree(['/app/access-denied']);
+  };

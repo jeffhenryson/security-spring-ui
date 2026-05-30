@@ -11,9 +11,11 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
 
   const token = store.accessToken();
-  const authReq = token ? req.clone({
-    setHeaders: { Authorization: `Bearer ${token}` }
-  }) : req;
+  const authReq = token
+    ? req.clone({
+        setHeaders: { Authorization: `Bearer ${token}` },
+      })
+    : req;
 
   return next(authReq).pipe(
     catchError((err: HttpErrorResponse) => {
@@ -25,18 +27,20 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
               router.navigate(['/auth/login']);
               return throwError(() => err);
             }
-            return next(req.clone({
-              setHeaders: { Authorization: `Bearer ${newToken}` }
-            }));
+            return next(
+              req.clone({
+                setHeaders: { Authorization: `Bearer ${newToken}` },
+              }),
+            );
           }),
           catchError(() => {
             store.clear();
             router.navigate(['/auth/login']);
             return throwError(() => err);
-          })
+          }),
         );
       }
       return throwError(() => err);
-    })
+    }),
   );
 };

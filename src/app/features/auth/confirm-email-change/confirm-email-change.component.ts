@@ -1,19 +1,19 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { environment } from '../../../../environments/environment';
+import { AuthService } from '../../../core/auth/auth.service';
 
 @Component({
   selector: 'app-confirm-email-change',
   standalone: true,
   imports: [RouterLink, MatButtonModule, MatProgressSpinnerModule],
   template: `
-    <div class="min-h-screen flex items-center justify-center bg-gray-950">
-      <div class="w-full max-w-sm p-8 bg-slate-900 rounded-2xl border border-slate-700 shadow-2xl text-center">
-        <h1 class="text-2xl font-bold text-cyan-400 mb-6">Confirmar Troca de Email</h1>
+    <div class="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
+      <div
+        class="w-full max-w-sm p-8 bg-[var(--surface-color)] rounded-2xl border border-[var(--border-color)] shadow-2xl text-center"
+      >
+        <h1 class="text-2xl font-bold text-[var(--active-color)] mb-6">Confirmar Troca de Email</h1>
 
         @if (loading()) {
           <mat-spinner diameter="40" class="mx-auto" />
@@ -30,7 +30,7 @@ import { environment } from '../../../../environments/environment';
 })
 export class ConfirmEmailChangeComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
-  private readonly http = inject(HttpClient);
+  private readonly authService = inject(AuthService);
 
   readonly loading = signal(true);
   readonly success = signal(false);
@@ -48,9 +48,7 @@ export class ConfirmEmailChangeComponent implements OnInit {
 
   private async confirm(code: string): Promise<void> {
     try {
-      await firstValueFrom(
-        this.http.post(`${environment.apiUrl}/auth/confirm-email-change`, { code })
-      );
+      await this.authService.confirmEmailChange(code);
       this.success.set(true);
     } catch {
       this.success.set(false);

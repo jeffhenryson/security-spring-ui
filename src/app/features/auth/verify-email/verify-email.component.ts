@@ -1,13 +1,11 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { environment } from '../../../../environments/environment';
+import { AuthService } from '../../../core/auth/auth.service';
 
 type ViewState = 'loading' | 'success' | 'manual-form';
 
@@ -23,18 +21,22 @@ type ViewState = 'loading' | 'success' | 'manual-form';
     MatProgressSpinnerModule,
   ],
   template: `
-    <div class="min-h-screen flex items-center justify-center bg-gray-950">
-      <div class="w-full max-w-sm p-8 bg-slate-900 rounded-2xl border border-slate-700 shadow-2xl text-center">
-        <h1 class="text-2xl font-bold text-cyan-400 mb-6">Verificação de Email</h1>
+    <div class="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
+      <div
+        class="w-full max-w-sm p-8 bg-[var(--surface-color)] rounded-2xl border border-[var(--border-color)] shadow-2xl text-center"
+      >
+        <h1 class="text-2xl font-bold text-[var(--active-color)] mb-6">Verificação de Email</h1>
 
         @switch (viewState()) {
           @case ('loading') {
             <mat-spinner diameter="40" class="mx-auto" />
-            <p class="text-slate-400 text-sm mt-4">Verificando seu email...</p>
+            <p class="text-[var(--text-secondary)] text-sm mt-4">Verificando seu email...</p>
           }
 
           @case ('success') {
-            <div class="p-4 bg-slate-800 rounded-lg border border-emerald-400 text-emerald-400 text-sm mb-4">
+            <div
+              class="p-4 bg-[var(--surface-hover)] rounded-lg border border-emerald-400 text-emerald-400 text-sm mb-4"
+            >
               Email verificado! Você já pode fazer login.
             </div>
             <a routerLink="/auth/login" mat-flat-button class="w-full">Ir para o login</a>
@@ -42,16 +44,26 @@ type ViewState = 'loading' | 'success' | 'manual-form';
 
           @case ('manual-form') {
             @if (verifyError()) {
-              <div class="p-3 bg-slate-800 rounded-lg border border-yellow-500 text-yellow-400 text-sm mb-4">
+              <div
+                class="p-3 bg-[var(--surface-hover)] rounded-lg border border-yellow-500 text-yellow-400 text-sm mb-4"
+              >
                 Código inválido ou expirado.
               </div>
             }
 
-            <p class="text-slate-400 text-sm mb-6">
-              {{ verifyError() ? 'Insira o código manualmente ou reenvie um novo.' : 'Insira o código enviado para seu email.' }}
+            <p class="text-[var(--text-secondary)] text-sm mb-6">
+              {{
+                verifyError()
+                  ? 'Insira o código manualmente ou reenvie um novo.'
+                  : 'Insira o código enviado para seu email.'
+              }}
             </p>
 
-            <form [formGroup]="form" (ngSubmit)="onManualSubmit()" class="flex flex-col gap-4 text-left">
+            <form
+              [formGroup]="form"
+              (ngSubmit)="onManualSubmit()"
+              class="flex flex-col gap-4 text-left"
+            >
               <mat-form-field appearance="outline">
                 <mat-label>Código de verificação</mat-label>
                 <input matInput formControlName="code" />
@@ -61,7 +73,12 @@ type ViewState = 'loading' | 'success' | 'manual-form';
                 <p class="text-red-400 text-sm text-center">{{ formErrorMsg() }}</p>
               }
 
-              <button mat-flat-button type="submit" [disabled]="loadingManual() || form.invalid" class="w-full">
+              <button
+                mat-flat-button
+                type="submit"
+                [disabled]="loadingManual() || form.invalid"
+                class="w-full"
+              >
                 @if (loadingManual()) {
                   <mat-spinner diameter="20" class="inline" />
                 } @else {
@@ -70,9 +87,13 @@ type ViewState = 'loading' | 'success' | 'manual-form';
               </button>
             </form>
 
-            <div class="mt-4 border-t border-slate-700 pt-4">
-              <p class="text-slate-400 text-sm mb-2">Não recebeu o código?</p>
-              <button mat-stroked-button (click)="resendCode()" [disabled]="loadingResend() || resendSent()">
+            <div class="mt-4 border-t border-[var(--border-color)] pt-4">
+              <p class="text-[var(--text-secondary)] text-sm mb-2">Não recebeu o código?</p>
+              <button
+                mat-stroked-button
+                (click)="resendCode()"
+                [disabled]="loadingResend() || resendSent()"
+              >
                 @if (loadingResend()) {
                   <mat-spinner diameter="16" class="inline" />
                 } @else if (resendSent()) {
@@ -91,9 +112,9 @@ type ViewState = 'loading' | 'success' | 'manual-form';
     </div>
   `,
 })
-export class VerifyEmailComponent implements OnInit {
+export class VerifyEmailComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
-  private readonly http = inject(HttpClient);
+  private readonly authService = inject(AuthService);
   private readonly fb = inject(FormBuilder);
 
   readonly viewState = signal<ViewState>('loading');
@@ -108,8 +129,12 @@ export class VerifyEmailComponent implements OnInit {
     code: ['', Validators.required],
   });
 
-  // Guarda o email para o reenvio, preenchido opcionalmente via query param
   private email = '';
+  private resendTimer: ReturnType<typeof setTimeout> | null = null;
+
+  ngOnDestroy(): void {
+    if (this.resendTimer !== null) clearTimeout(this.resendTimer);
+  }
 
   ngOnInit(): void {
     this.email = this.route.snapshot.queryParamMap.get('email') ?? '';
@@ -124,9 +149,7 @@ export class VerifyEmailComponent implements OnInit {
   private async autoVerify(code: string): Promise<void> {
     this.viewState.set('loading');
     try {
-      await firstValueFrom(
-        this.http.post(`${environment.apiUrl}/auth/verify-email`, { code })
-      );
+      await this.authService.verifyEmail(code);
       this.viewState.set('success');
     } catch {
       // Auto-verificação falhou: mostrar form manual com aviso de erro
@@ -140,9 +163,7 @@ export class VerifyEmailComponent implements OnInit {
     this.loadingManual.set(true);
     this.formErrorMsg.set('');
     try {
-      await firstValueFrom(
-        this.http.post(`${environment.apiUrl}/auth/verify-email`, this.form.getRawValue())
-      );
+      await this.authService.verifyEmail(this.form.getRawValue().code);
       this.viewState.set('success');
     } catch {
       this.formErrorMsg.set('Código inválido ou expirado.');
@@ -155,11 +176,9 @@ export class VerifyEmailComponent implements OnInit {
     this.loadingResend.set(true);
     this.resendError.set('');
     try {
-      await firstValueFrom(
-        this.http.post(`${environment.apiUrl}/auth/resend-verification`, { email: this.email })
-      );
+      await this.authService.resendVerification(this.email);
       this.resendSent.set(true);
-      setTimeout(() => this.resendSent.set(false), 15_000);
+      this.resendTimer = setTimeout(() => this.resendSent.set(false), 15_000);
     } catch {
       this.resendError.set('Não foi possível reenviar. Tente novamente.');
     } finally {

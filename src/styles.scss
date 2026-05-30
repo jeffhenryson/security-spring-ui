@@ -3,52 +3,58 @@
 // ─── Dark theme (default) ────────────────────────────────────────────────────
 html {
   height: 100%;
-  @include mat.theme((
-    color: (
-      primary: mat.$cyan-palette,
-      tertiary: mat.$violet-palette,
-      theme-type: dark,
-    ),
-    typography: Roboto,
-    density: 0,
-  ));
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$cyan-palette,
+        tertiary: mat.$violet-palette,
+        theme-type: dark,
+      ),
+      typography: Roboto,
+      density: 0,
+    )
+  );
 
   // Design tokens — dark
-  --bg-primary:      #030712;
-  --bg-secondary:    #0a0f1e;
-  --surface-color:   #0f172a;
-  --surface-hover:   rgb(30 41 59 / 1);
-  --active-bg:       rgb(15 23 42 / 1);
-  --border-color:    rgb(51 65 85 / 1);
-  --text-primary:    #f1f5f9;
-  --text-secondary:  #94a3b8;
-  --text-muted:      #64748b;
+  --bg-primary: #030712;
+  --bg-secondary: #0a0f1e;
+  --surface-color: #0f172a;
+  --surface-hover: rgb(30 41 59 / 1);
+  --active-bg: rgb(15 23 42 / 1);
+  --active-color: rgb(34 211 238);
+  --border-color: rgb(51 65 85 / 1);
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
 }
 
 // ─── Light theme override ─────────────────────────────────────────────────────
 html.theme-light {
   color-scheme: light;
 
-  @include mat.theme((
-    color: (
-      primary: mat.$cyan-palette,
-      tertiary: mat.$violet-palette,
-      theme-type: light,
-    ),
-    typography: Roboto,
-    density: 0,
-  ));
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$cyan-palette,
+        tertiary: mat.$violet-palette,
+        theme-type: light,
+      ),
+      typography: Roboto,
+      density: 0,
+    )
+  );
 
   // Design tokens — light
-  --bg-primary:      #f8fafc;
-  --bg-secondary:    #ffffff;
-  --surface-color:   #f1f5f9;
-  --surface-hover:   rgb(226 232 240 / 1);
-  --active-bg:       rgb(207 250 254 / 0.5);
-  --border-color:    rgb(203 213 225 / 1);
-  --text-primary:    #0f172a;
-  --text-secondary:  #475569;
-  --text-muted:      #94a3b8;
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --surface-color: #f1f5f9;
+  --surface-hover: rgb(226 232 240 / 1);
+  --active-bg: rgb(207 250 254 / 0.5);
+  --active-color: rgb(8 145 178);
+  --border-color: rgb(203 213 225 / 1);
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
 }
 
 // ─── Base ─────────────────────────────────────────────────────────────────────
@@ -79,14 +85,51 @@ html.theme-light body {
   border: 1px solid var(--border-color) !important;
 }
 
-.mat-mdc-menu-item { color: var(--text-secondary) !important; }
-.mat-mdc-menu-item:hover { background-color: var(--surface-hover) !important; }
+.mat-mdc-menu-item {
+  color: var(--text-secondary) !important;
+}
+.mat-mdc-menu-item:hover {
+  background-color: var(--surface-hover) !important;
+}
 
 .mat-mdc-table,
 .mat-mdc-header-row,
-.mat-mdc-row { background: transparent !important; }
+.mat-mdc-row {
+  background: transparent !important;
+}
 
 .mat-mdc-snack-bar-container {
   --mdc-snackbar-container-color: var(--surface-color);
   --mdc-snackbar-supporting-text-color: var(--text-primary);
+}
+
+// ─── Skeleton shimmer ─────────────────────────────────────────────────────────
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgb(30 41 59 / 1) 25%,
+    rgb(51 65 85 / 1) 50%,
+    rgb(30 41 59 / 1) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s infinite;
+}
+
+html.theme-light .skeleton {
+  background: linear-gradient(
+    90deg,
+    rgb(226 232 240 / 1) 25%,
+    rgb(241 245 249 / 1) 50%,
+    rgb(226 232 240 / 1) 75%
+  );
+  background-size: 200% 100%;
 }

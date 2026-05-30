@@ -1,13 +1,11 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { environment } from '../../../../environments/environment';
+import { AuthService } from '../../../core/auth/auth.service';
 
 @Component({
   selector: 'app-forgot-password',
@@ -21,19 +19,23 @@ import { environment } from '../../../../environments/environment';
     MatProgressSpinnerModule,
   ],
   template: `
-    <div class="min-h-screen flex items-center justify-center bg-gray-950">
-      <div class="w-full max-w-sm p-8 bg-slate-900 rounded-2xl border border-slate-700 shadow-2xl">
+    <div class="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
+      <div class="w-full max-w-sm p-8 bg-[var(--surface-color)] rounded-2xl border border-[var(--border-color)] shadow-2xl">
         <div class="mb-8 text-center">
-          <h1 class="text-2xl font-bold text-cyan-400 mb-1">Recuperar senha</h1>
-          <p class="text-slate-400 text-sm">Informe seu email para receber as instruções</p>
+          <h1 class="text-2xl font-bold text-[var(--active-color)] mb-1">Recuperar senha</h1>
+          <p class="text-[var(--text-secondary)] text-sm">Informe seu email para receber as instruções</p>
         </div>
 
         @if (sent()) {
-          <div class="p-4 bg-slate-800 rounded-lg border border-emerald-400 text-emerald-400 text-sm text-center mb-4">
+          <div
+            class="p-4 bg-[var(--surface-hover)] rounded-lg border border-emerald-400 text-emerald-400 text-sm text-center mb-4"
+          >
             Se o email estiver cadastrado, você receberá as instruções em breve.
           </div>
           <div class="text-center">
-            <a routerLink="/auth/login" class="text-cyan-400 hover:underline text-sm">Voltar ao login</a>
+            <a routerLink="/auth/login" class="text-[var(--active-color)] hover:underline text-sm"
+              >Voltar ao login</a
+            >
           </div>
         } @else {
           <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
@@ -42,7 +44,12 @@ import { environment } from '../../../../environments/environment';
               <input matInput type="email" formControlName="email" autocomplete="email" />
             </mat-form-field>
 
-            <button mat-flat-button type="submit" [disabled]="loading() || form.invalid" class="w-full mt-2">
+            <button
+              mat-flat-button
+              type="submit"
+              [disabled]="loading() || form.invalid"
+              class="w-full mt-2"
+            >
               @if (loading()) {
                 <mat-spinner diameter="20" class="inline" />
               } @else {
@@ -52,7 +59,7 @@ import { environment } from '../../../../environments/environment';
           </form>
 
           <div class="mt-6 text-center text-sm">
-            <a routerLink="/auth/login" class="text-cyan-400 hover:underline">Voltar ao login</a>
+            <a routerLink="/auth/login" class="text-[var(--active-color)] hover:underline">Voltar ao login</a>
           </div>
         }
       </div>
@@ -61,7 +68,7 @@ import { environment } from '../../../../environments/environment';
 })
 export class ForgotPasswordComponent {
   private readonly fb = inject(FormBuilder);
-  private readonly http = inject(HttpClient);
+  private readonly authService = inject(AuthService);
 
   readonly loading = signal(false);
   readonly sent = signal(false);
@@ -74,11 +81,7 @@ export class ForgotPasswordComponent {
     if (this.form.invalid) return;
     this.loading.set(true);
     try {
-      await firstValueFrom(
-        this.http.post(`${environment.apiUrl}/auth/forgot-password`, this.form.getRawValue())
-      );
-    } catch {
-      // Silencioso — nunca revelar se o email existe
+      await this.authService.forgotPassword(this.form.getRawValue().email);
     } finally {
       this.loading.set(false);
       this.sent.set(true);

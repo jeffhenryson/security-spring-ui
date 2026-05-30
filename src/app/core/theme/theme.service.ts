@@ -7,18 +7,22 @@ const STORAGE_KEY = 'ss_theme';
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
   private readonly _theme = signal<Theme>(this.loadSavedTheme());
+  private readonly _osPrefersDark = signal(
+    window.matchMedia('(prefers-color-scheme: dark)').matches,
+  );
 
   readonly theme = this._theme.asReadonly();
 
   readonly resolvedTheme = computed<'dark' | 'light'>(() => {
     const t = this._theme();
-    if (t === 'system') {
-      return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-    }
+    if (t === 'system') return this._osPrefersDark() ? 'dark' : 'light';
     return t;
   });
 
   constructor() {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    mq.addEventListener('change', (e) => this._osPrefersDark.set(e.matches));
+
     effect(() => {
       this.applyTheme(this.resolvedTheme());
     });

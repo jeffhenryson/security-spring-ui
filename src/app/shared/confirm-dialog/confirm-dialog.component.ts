@@ -16,13 +16,11 @@ export interface ConfirmDialogData {
   template: `
     <h2 mat-dialog-title>{{ data.title }}</h2>
     <mat-dialog-content>
-      <p class="text-slate-300 m-0">{{ data.message }}</p>
+      <p class="text-[var(--text-primary)] m-0">{{ data.message }}</p>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-stroked-button [mat-dialog-close]="false">Cancelar</button>
-      <button mat-flat-button
-              [class.!bg-red-700]="data.danger"
-              [mat-dialog-close]="true">
+      <button mat-flat-button [class.!bg-red-700]="data.danger" [mat-dialog-close]="true">
         {{ data.confirmLabel ?? 'Confirmar' }}
       </button>
     </mat-dialog-actions>
