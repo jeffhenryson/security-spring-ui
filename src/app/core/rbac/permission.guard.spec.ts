@@ -94,7 +94,7 @@ describe('permissionGuard', () => {
 
   it('redireciona para /auth/login quando não autenticado', () => {
     const guard = permissionGuard('USER_READ');
-    const result = runGuard(() => guard({} as any, {} as any));
+    const result = runGuard(() => guard({} as any, [] as any));
     expect(result).toEqual(['/auth/login']);
   });
 });

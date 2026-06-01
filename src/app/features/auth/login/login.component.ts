@@ -1,6 +1,6 @@
-import { Component, inject, signal, computed, DestroyRef } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, computed, DestroyRef } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
@@ -16,6 +16,7 @@ const LOCKOUT_MS = 30_000;
 @Component({
   selector: 'app-login',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ReactiveFormsModule,
     RouterLink,
@@ -132,6 +133,7 @@ export class LoginComponent {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly snackBar = inject(MatSnackBar);
 
   private lockoutTimer: ReturnType<typeof setTimeout> | null = null;
@@ -192,9 +194,11 @@ export class LoginComponent {
         this.authService.setPendingChallengeToken(res.challengeToken);
         this.router.navigate(['/auth/2fa']);
       } else {
-        // SECURITY: destino fixo — se returnUrl for adicionado no futuro, validar contra
-        // whitelist de rotas internas para evitar open redirect.
-        this.router.navigate(['/app/dashboard']);
+        const raw = this.route.snapshot.queryParamMap.get('returnUrl') ?? '';
+        // SECURITY: só aceita rotas internas — deve começar com '/' e não com '//'
+        // para evitar open redirect (ex: //evil.com ou https://evil.com).
+        const dest = raw.startsWith('/') && !raw.startsWith('//') ? raw : '/app/dashboard';
+        this.router.navigateByUrl(dest);
       }
     } catch {
       const attempts = this.failedAttempts() + 1;

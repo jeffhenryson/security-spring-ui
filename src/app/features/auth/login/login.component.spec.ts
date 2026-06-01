@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { LoginComponent } from './login.component';
 import { AuthService } from '../../../core/auth/auth.service';
 
@@ -18,20 +18,26 @@ const CHALLENGE = {
 describe('LoginComponent', () => {
   let component: LoginComponent;
   let authService: jest.Mocked<Pick<AuthService, 'login' | 'setPendingChallengeToken'>>;
-  let router: jest.Mocked<Pick<Router, 'navigate'>>;
+  let router: jest.Mocked<Pick<Router, 'navigate' | 'navigateByUrl'>>;
+  // Mutable — cada teste pode sobrescrever returnUrl antes de criar o componente
+  const routeMock = {
+    snapshot: { queryParamMap: { get: (_key: string) => null as string | null } },
+  };
 
   beforeEach(async () => {
+    routeMock.snapshot.queryParamMap.get = () => null;
     authService = {
       login: jest.fn().mockResolvedValue(TOKEN_PAIR),
       setPendingChallengeToken: jest.fn(),
     };
-    router = { navigate: jest.fn() };
+    router = { navigate: jest.fn(), navigateByUrl: jest.fn() };
 
     await TestBed.configureTestingModule({
       imports: [LoginComponent],
       providers: [
         { provide: AuthService, useValue: authService },
         { provide: Router, useValue: router },
+        { provide: ActivatedRoute, useValue: routeMock },
       ],
     })
       .overrideTemplate(LoginComponent, '')
@@ -42,12 +48,26 @@ describe('LoginComponent', () => {
     fixture.detectChanges();
   });
 
-  it('redireciona para /app/dashboard após login bem-sucedido', async () => {
+  it('redireciona para /app/dashboard após login sem returnUrl', async () => {
     component.form.setValue({ username: 'alice', password: 'secret' });
     await component.onSubmit();
     expect(authService.login).toHaveBeenCalledWith({ username: 'alice', password: 'secret' });
-    expect(router.navigate).toHaveBeenCalledWith(['/app/dashboard']);
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/app/dashboard');
     expect(component.loading()).toBe(false);
+  });
+
+  it('redireciona para returnUrl válido após login', async () => {
+    routeMock.snapshot.queryParamMap.get = (k) => (k === 'returnUrl' ? '/app/settings/users' : null);
+    component.form.setValue({ username: 'alice', password: 'secret' });
+    await component.onSubmit();
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/app/settings/users');
+  });
+
+  it('ignora returnUrl externo (open redirect) e usa /app/dashboard', async () => {
+    routeMock.snapshot.queryParamMap.get = (k) => (k === 'returnUrl' ? '//evil.com' : null);
+    component.form.setValue({ username: 'alice', password: 'secret' });
+    await component.onSubmit();
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/app/dashboard');
   });
 
   it('armazena challengeToken no serviço e redireciona para /auth/2fa quando 2FA é necessário', async () => {
@@ -63,7 +83,7 @@ describe('LoginComponent', () => {
     component.form.setValue({ username: 'alice', password: 'wrong' });
     await component.onSubmit();
     expect(component.errorMsg()).toBe('Usuário ou senha inválidos.');
-    expect(router.navigate).not.toHaveBeenCalled();
+    expect(router.navigateByUrl).not.toHaveBeenCalled();
     expect(component.loading()).toBe(false);
   });
 

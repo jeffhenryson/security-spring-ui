@@ -1,5 +1,5 @@
 import { ApplicationConfig, APP_INITIALIZER, ErrorHandler, provideZonelessChangeDetection } from '@angular/core';
-import { provideRouter, TitleStrategy, withPreloading, PreloadAllModules } from '@angular/router';
+import { provideRouter, TitleStrategy, withPreloading } from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideHttpClient, withInterceptors, withXsrfConfiguration } from '@angular/common/http';
 import { MAT_SNACK_BAR_DEFAULT_OPTIONS } from '@angular/material/snack-bar';
@@ -10,6 +10,7 @@ import { globalErrorInterceptor } from './core/http/global-error.interceptor';
 import { AuthService } from './core/auth/auth.service';
 import { ThemeService } from './core/theme/theme.service';
 import { AppTitleStrategy } from './core/routing/title.strategy';
+import { PermissionPreloadStrategy } from './core/routing/permission-preload.strategy';
 import { provideApiConfiguration } from './api/api-configuration';
 import { environment } from '../environments/environment';
 
@@ -25,7 +26,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideZonelessChangeDetection(),
     provideApiConfiguration(environment.apiUrl),
-    provideRouter(routes, withPreloading(PreloadAllModules)),
+    provideRouter(routes, withPreloading(PermissionPreloadStrategy)),
     { provide: TitleStrategy, useClass: AppTitleStrategy },
     provideAnimationsAsync(),
     provideHttpClient(

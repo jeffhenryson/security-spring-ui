@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { trigger, transition, style, animate, query } from '@angular/animations';
 import { SidebarComponent } from '../sidebar/sidebar.component';
@@ -7,6 +7,7 @@ import { TopbarComponent } from '../topbar/topbar.component';
 @Component({
   selector: 'app-shell',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterOutlet, SidebarComponent, TopbarComponent],
   animations: [
     trigger('routeAnimations', [

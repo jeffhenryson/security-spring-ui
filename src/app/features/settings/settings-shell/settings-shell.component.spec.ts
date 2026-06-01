@@ -17,9 +17,11 @@ function makeActivatedRoute() {
 
 function makeStore(roles: string[] = []) {
   const isAdmin = roles.some(r => r === 'ADMIN' || r === 'ROLE_ADMIN');
+  const perms = isAdmin ? ['USER_READ', 'ROLE_READ', 'PERMISSION_READ', 'AUDIT_READ'] : [];
   return {
     hasRole: jest.fn((role: string) => roles.includes(role)),
     hasPermission: jest.fn(() => isAdmin),
+    permissions: jest.fn(() => perms),
   } as unknown as AuthStore;
 }
 

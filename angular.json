@@ -54,6 +54,11 @@
               }
             ],
             "styles": [
+              "@fontsource/roboto/300.css",
+              "@fontsource/roboto/400.css",
+              "@fontsource/roboto/500.css",
+              "material-icons/iconfont/filled.css",
+              "material-symbols/outlined.css",
               "src/tailwind-generated.css",
               "src/styles.scss"
             ]

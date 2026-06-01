@@ -39,5 +39,12 @@ export const authRoutes: Routes = [
         (m) => m.ConfirmEmailChangeComponent,
       ),
   },
+  {
+    path: 'oauth2/callback',
+    loadComponent: () =>
+      import('./oauth2-callback/oauth2-callback.component').then(
+        (m) => m.OAuth2CallbackComponent,
+      ),
+  },
   { path: '**', redirectTo: 'login' },
 ];

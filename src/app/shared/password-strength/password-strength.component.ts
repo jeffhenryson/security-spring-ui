@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 interface StrengthRule {
@@ -17,6 +17,7 @@ const RULES: StrengthRule[] = [
 @Component({
   selector: 'app-password-strength',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule],
   template: `
     @if (pw()) {

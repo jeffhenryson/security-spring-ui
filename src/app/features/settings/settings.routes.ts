@@ -29,26 +29,26 @@ export const settingsRoutes: Routes = [
       {
         path: 'users',
         canMatch: [permissionGuard(PERMISSIONS.USER_READ)],
-        data: { title: 'Usuários' },
+        data: { title: 'Usuários', preloadPermission: PERMISSIONS.USER_READ },
         loadComponent: () => import('./users/users.component').then((m) => m.UsersComponent),
       },
       {
         path: 'roles',
         canMatch: [permissionGuard(PERMISSIONS.ROLE_READ)],
-        data: { title: 'Roles' },
+        data: { title: 'Roles', preloadPermission: PERMISSIONS.ROLE_READ },
         loadComponent: () => import('./roles/roles.component').then((m) => m.RolesComponent),
       },
       {
         path: 'permissions',
         canMatch: [permissionGuard(PERMISSIONS.PERMISSION_READ)],
-        data: { title: 'Permissões' },
+        data: { title: 'Permissões', preloadPermission: PERMISSIONS.PERMISSION_READ },
         loadComponent: () =>
           import('./permissions/permissions.component').then((m) => m.PermissionsComponent),
       },
       {
         path: 'audit-logs',
         canMatch: [permissionGuard(PERMISSIONS.AUDIT_READ)],
-        data: { title: 'Logs de auditoria' },
+        data: { title: 'Logs de auditoria', preloadPermission: PERMISSIONS.AUDIT_READ },
         loadComponent: () =>
           import('./audit-logs/audit-logs.component').then((m) => m.AuditLogsComponent),
       },

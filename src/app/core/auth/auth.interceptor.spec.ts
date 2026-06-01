@@ -30,7 +30,7 @@ describe('authInterceptor', () => {
       providers: [
         provideHttpClient(withInterceptors([authInterceptor])),
         provideHttpClientTesting(),
-        { provide: Router, useValue: { navigate: jest.fn(), createUrlTree: jest.fn() } },
+        { provide: Router, useValue: { navigate: jest.fn(), createUrlTree: jest.fn(), url: '/app/dashboard' } },
         { provide: AuthService, useValue: authService },
       ],
     });
@@ -104,7 +104,7 @@ describe('authInterceptor', () => {
 
     await flushPromises();
 
-    expect(router.navigate).toHaveBeenCalledWith(['/auth/login']);
+    expect(router.navigate).toHaveBeenCalledWith(['/auth/login'], { queryParams: { returnUrl: '/app/dashboard' } });
     expect(store.accessToken()).toBeNull();
   });
 
@@ -121,7 +121,7 @@ describe('authInterceptor', () => {
     await flushPromises();
 
     expect(store.accessToken()).toBeNull();
-    expect(router.navigate).toHaveBeenCalledWith(['/auth/login']);
+    expect(router.navigate).toHaveBeenCalledWith(['/auth/login'], { queryParams: { returnUrl: '/app/dashboard' } });
   });
 
   // ── Rotas /auth/ não fazem retry ──────────────────────────────────────────

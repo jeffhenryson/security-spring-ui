@@ -49,3 +49,7 @@ openapi.json
 # System files
 .DS_Store
 Thumbs.db
+
+# Documentation and tools
+/docs/
+.claude/

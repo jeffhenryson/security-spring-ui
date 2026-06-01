@@ -24,7 +24,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
           switchMap(() => {
             const newToken = store.accessToken();
             if (!newToken) {
-              router.navigate(['/auth/login']);
+              const returnUrl = router.url;
+              router.navigate(['/auth/login'], { queryParams: { returnUrl } });
               return throwError(() => err);
             }
             return next(
@@ -34,8 +35,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
             );
           }),
           catchError(() => {
+            const returnUrl = router.url;
             store.clear();
-            router.navigate(['/auth/login']);
+            router.navigate(['/auth/login'], { queryParams: { returnUrl } });
             return throwError(() => err);
           }),
         );

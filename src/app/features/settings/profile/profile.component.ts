@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, ViewChild, computed, effect, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -17,6 +17,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 @Component({
   selector: 'app-profile',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ReactiveFormsModule,
     MatFormFieldModule,
@@ -28,6 +29,30 @@ import { HttpErrorResponse } from '@angular/common/http';
   ],
   template: `
     <div class="p-6 max-w-2xl mx-auto flex flex-col gap-6">
+
+      @if (loading()) {
+        <!-- Skeleton: avatar -->
+        <section class="bg-[var(--surface-color)] border border-[var(--border-color)] rounded-xl p-6">
+          <div class="skeleton h-4 w-28 rounded mb-4"></div>
+          <div class="flex items-center gap-5">
+            <div class="skeleton w-20 h-20 rounded-full shrink-0"></div>
+            <div class="flex flex-col gap-2">
+              <div class="skeleton h-8 w-28 rounded"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Skeleton: dados do perfil -->
+        <section class="bg-[var(--surface-color)] border border-[var(--border-color)] rounded-xl p-6">
+          <div class="skeleton h-4 w-32 rounded mb-5"></div>
+          <div class="flex flex-col gap-4">
+            <div class="skeleton h-14 w-full rounded"></div>
+            <div class="skeleton h-14 w-full rounded"></div>
+            <div class="skeleton h-14 w-full rounded"></div>
+          </div>
+        </section>
+      } @else {
+
       <!-- Foto de perfil -->
       <section class="bg-[var(--surface-color)] border border-[var(--border-color)] rounded-xl p-6">
         <h3 class="text-base font-semibold text-[var(--text-primary)] mt-0 mb-4">Foto de perfil</h3>
@@ -218,6 +243,7 @@ import { HttpErrorResponse } from '@angular/common/http';
           </div>
         </form>
       </section>
+      } <!-- end @else -->
     </div>
   `,
 })
@@ -231,6 +257,7 @@ export class ProfileComponent {
   private readonly fb = inject(FormBuilder);
   private readonly snackBar = inject(MatSnackBar);
 
+  readonly loading = computed(() => this.store.currentUser() === null);
   readonly avatar = this.avatarService.currentAvatar;
   readonly userInitials = this.store.userInitials;
   readonly pendingEmail = computed(() => this.store.currentUser()?.pendingEmail ?? '');
