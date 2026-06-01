@@ -185,8 +185,8 @@ export class RolesComponent implements OnInit {
   readonly skeletonRows = Array(6).fill(0);
   readonly searchControl = this.fb.control('');
 
-  readonly canCreate = computed(() => this.store.hasPermission(PERMISSIONS.ROLE_CREATE));
-  readonly canDelete = computed(() => this.store.hasPermission(PERMISSIONS.ROLE_DELETE));
+  readonly canCreate = computed(() => this.store.hasPermission(PERMISSIONS.DEV_ROLE_MANAGE));
+  readonly canDelete = computed(() => this.store.hasPermission(PERMISSIONS.DEV_ROLE_MANAGE));
   readonly canManagePermissions = computed(() =>
     this.store.hasPermission(PERMISSIONS.ROLE_MANAGE_PERMISSIONS),
   );

@@ -20,7 +20,7 @@ import { AuthStore } from '../../../../core/auth/auth.store';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { SecurityService } from '../../../../core/security/security.service';
 
-type TotpView = 'idle' | 'setup-qr' | 'backup-codes' | 'disable-form' | 'regen-form';
+type TotpView = 'idle' | 'setup-qr' | 'backup-codes' | 'disable-form' | 'regen-form' | 'replace-form';
 
 @Component({
   selector: 'app-totp',
@@ -79,12 +79,19 @@ type TotpView = 'idle' | 'setup-qr' | 'backup-codes' | 'disable-form' | 'regen-f
             @if (totpEnabled() === true) {
               <button
                 mat-stroked-button
+                (click)="view.set('replace-form'); error.set('')"
+                [disabled]="loading()"
+              >
+                Trocar dispositivo
+              </button>
+              <button
+                mat-stroked-button
                 (click)="view.set('regen-form'); error.set('')"
                 [disabled]="loading()"
               >
                 Regenerar backup codes
               </button>
-              <button mat-stroked-button (click)="view.set('disable-form')">
+              <button mat-stroked-button (click)="view.set('disable-form'); error.set('')">
                 Desabilitar 2FA
               </button>
             }
@@ -208,10 +215,17 @@ type TotpView = 'idle' | 'setup-qr' | 'backup-codes' | 'disable-form' | 'regen-f
               <mat-label>Senha atual</mat-label>
               <input
                 matInput
-                type="password"
+                [type]="showDisablePwd() ? 'text' : 'password'"
                 formControlName="currentPassword"
                 autocomplete="current-password"
               />
+              <button mat-icon-button matSuffix type="button"
+                      (mousedown)="showDisablePwd.set(true)"
+                      (mouseup)="showDisablePwd.set(false)"
+                      (mouseleave)="showDisablePwd.set(false)"
+                      aria-label="Mostrar senha">
+                <mat-icon class="!text-[18px]">{{ showDisablePwd() ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>Código TOTP</mat-label>
@@ -252,10 +266,17 @@ type TotpView = 'idle' | 'setup-qr' | 'backup-codes' | 'disable-form' | 'regen-f
               <mat-label>Senha atual</mat-label>
               <input
                 matInput
-                type="password"
+                [type]="showRegenPwd() ? 'text' : 'password'"
                 formControlName="currentPassword"
                 autocomplete="current-password"
               />
+              <button mat-icon-button matSuffix type="button"
+                      (mousedown)="showRegenPwd.set(true)"
+                      (mouseup)="showRegenPwd.set(false)"
+                      (mouseleave)="showRegenPwd.set(false)"
+                      aria-label="Mostrar senha">
+                <mat-icon class="!text-[18px]">{{ showRegenPwd() ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
             </mat-form-field>
             @if (error()) {
               <p class="text-red-400 text-sm m-0">{{ error() }}</p>
@@ -272,6 +293,41 @@ type TotpView = 'idle' | 'setup-qr' | 'backup-codes' | 'disable-form' | 'regen-f
                 Regenerar
               </button>
               <button mat-stroked-button type="button" (click)="view.set('idle')">
+                Cancelar
+              </button>
+            </div>
+          </form>
+        }
+
+        @case ('replace-form') {
+          <form
+            [formGroup]="replaceForm"
+            (ngSubmit)="replaceTotp()"
+            class="flex flex-col gap-4 max-w-xs"
+          >
+            <p class="text-[var(--text-primary)] text-sm m-0">
+              Insira o código atual do seu app autenticador para gerar um novo QR code e
+              vincular um novo dispositivo.
+            </p>
+            <mat-form-field appearance="outline">
+              <mat-label>Código TOTP atual</mat-label>
+              <input matInput formControlName="currentTotpCode" maxlength="6" autocomplete="one-time-code" />
+            </mat-form-field>
+            @if (error()) {
+              <p class="text-red-400 text-sm m-0">{{ error() }}</p>
+            }
+            <div class="flex gap-3">
+              <button
+                mat-flat-button
+                type="submit"
+                [disabled]="loading() || replaceForm.invalid"
+              >
+                @if (loading()) {
+                  <mat-spinner diameter="18" class="mr-2" />
+                }
+                Trocar dispositivo
+              </button>
+              <button mat-stroked-button type="button" (click)="view.set('idle'); error.set('')">
                 Cancelar
               </button>
             </div>
@@ -303,6 +359,8 @@ export class TotpComponent {
   readonly view = signal<TotpView>('idle');
   readonly loading = signal(false);
   readonly error = signal('');
+  readonly showDisablePwd = signal(false);
+  readonly showRegenPwd = signal(false);
   readonly qrDataUrl = signal('');
   readonly secret = signal('');
   readonly backupCodes = signal<string[]>([]);
@@ -320,6 +378,10 @@ export class TotpComponent {
 
   readonly regenForm = this.fb.nonNullable.group({
     currentPassword: ['', Validators.required],
+  });
+
+  readonly replaceForm = this.fb.nonNullable.group({
+    currentTotpCode: ['', [Validators.required, Validators.minLength(6), Validators.maxLength(6)]],
   });
 
   async startSetup(): Promise<void> {
@@ -366,9 +428,9 @@ export class TotpComponent {
       this.confirmForm.reset();
       this.view.set('backup-codes');
       this.snackBar.open('2FA habilitado com sucesso!', 'OK', { duration: 3000 });
-      try {
-        await this.authService.loadCurrentUser();
-      } catch {}
+      // Atualiza o store diretamente — não depende de um re-fetch que pode falhar.
+      const u = this.store.currentUser();
+      if (u) this.store.setCurrentUser({ ...u, totpEnabled: true });
     } catch {
       this.error.set('Código inválido ou expirado. Tente novamente.');
     } finally {
@@ -385,14 +447,40 @@ export class TotpComponent {
       this.disableForm.reset();
       this.view.set('idle');
       this.snackBar.open('2FA desabilitado.', 'OK', { duration: 3000 });
-      try {
-        await this.authService.loadCurrentUser();
-      } catch {}
+      const u = this.store.currentUser();
+      if (u) this.store.setCurrentUser({ ...u, totpEnabled: false });
     } catch (err) {
       if (err instanceof HttpErrorResponse && (err.status === 401 || err.status === 403)) {
         this.error.set('Senha ou código inválido.');
       } else {
         this.error.set('Erro ao desabilitar. Tente novamente.');
+      }
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  async replaceTotp(): Promise<void> {
+    if (this.replaceForm.invalid) return;
+    this.loading.set(true);
+    this.error.set('');
+    try {
+      const res = await this.securityService.replaceTotp(this.replaceForm.getRawValue().currentTotpCode);
+      this.replaceForm.reset();
+      this.secret.set(res.secret);
+      try {
+        const QRCode = await import('qrcode');
+        this.qrDataUrl.set(await QRCode.toDataURL(res.otpauthUri, { width: 200, margin: 1 }));
+      } catch {
+        this.qrDataUrl.set('');
+      }
+      this.view.set('setup-qr');
+      this.snackBar.open('Código válido. Escaneie o novo QR code.', 'OK', { duration: 3000 });
+    } catch (err) {
+      if (err instanceof HttpErrorResponse && err.status === 400) {
+        this.error.set('Código inválido. Verifique seu app autenticador.');
+      } else {
+        this.error.set('Erro ao trocar dispositivo. Tente novamente.');
       }
     } finally {
       this.loading.set(false);

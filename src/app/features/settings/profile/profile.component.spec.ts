@@ -31,6 +31,8 @@ describe('ProfileComponent', () => {
     profileService = {
       updateProfile: jest.fn().mockResolvedValue(undefined),
       changePassword: jest.fn().mockResolvedValue(undefined),
+      uploadAvatar: jest.fn().mockResolvedValue(undefined),
+      deleteAvatar: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<ProfileService>;
 
     authService = { loadCurrentUser: jest.fn().mockResolvedValue(undefined) };
@@ -177,11 +179,12 @@ describe('ProfileComponent', () => {
   // ── removeAvatar ──────────────────────────────────────────────────────────
 
   describe('removeAvatar', () => {
-    it('chama avatarService.removeAvatar e exibe snackbar', () => {
+    it('chama profileService.deleteAvatar + avatarService.clearLocalAvatar e exibe snackbar', async () => {
       const avatarService = TestBed.inject(AvatarService);
-      jest.spyOn(avatarService, 'removeAvatar').mockImplementation(() => {});
-      component.removeAvatar();
-      expect(avatarService.removeAvatar).toHaveBeenCalled();
+      jest.spyOn(avatarService, 'clearLocalAvatar').mockImplementation(() => {});
+      await component.removeAvatar();
+      expect(profileService.deleteAvatar).toHaveBeenCalled();
+      expect(avatarService.clearLocalAvatar).toHaveBeenCalled();
       expect(snackBar.open).toHaveBeenCalledWith('Foto removida.', 'OK', { duration: 2500 });
     });
   });

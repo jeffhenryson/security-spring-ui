@@ -5,6 +5,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../../core/auth/auth.service';
 import { passwordMatchValidator } from '../../../core/validators/password.validators';
 import { PasswordStrengthComponent } from '../../../shared/password-strength/password-strength.component';
@@ -20,6 +21,7 @@ import { PasswordStrengthComponent } from '../../../shared/password-strength/pas
     MatInputModule,
     MatButtonModule,
     MatProgressSpinnerModule,
+    MatIconModule,
     PasswordStrengthComponent,
   ],
   template: `
@@ -54,10 +56,17 @@ import { PasswordStrengthComponent } from '../../../shared/password-strength/pas
               <mat-label>Nova senha</mat-label>
               <input
                 matInput
-                type="password"
+                [type]="showNew() ? 'text' : 'password'"
                 formControlName="newPassword"
                 autocomplete="new-password"
               />
+              <button mat-icon-button matSuffix type="button"
+                      (mousedown)="showNew.set(true)"
+                      (mouseup)="showNew.set(false)"
+                      (mouseleave)="showNew.set(false)"
+                      [attr.aria-label]="showNew() ? 'Ocultar senha' : 'Mostrar senha'">
+                <mat-icon class="!text-[18px]">{{ showNew() ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
               @if (
                 form.get('newPassword')?.hasError('minlength') && form.get('newPassword')?.touched
               ) {
@@ -70,10 +79,17 @@ import { PasswordStrengthComponent } from '../../../shared/password-strength/pas
               <mat-label>Confirmar senha</mat-label>
               <input
                 matInput
-                type="password"
+                [type]="showConfirm() ? 'text' : 'password'"
                 formControlName="confirmPassword"
                 autocomplete="new-password"
               />
+              <button mat-icon-button matSuffix type="button"
+                      (mousedown)="showConfirm.set(true)"
+                      (mouseup)="showConfirm.set(false)"
+                      (mouseleave)="showConfirm.set(false)"
+                      aria-label="Mostrar confirmação">
+                <mat-icon class="!text-[18px]">{{ showConfirm() ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
             </mat-form-field>
 
             <!-- Erro de grupo fica fora do mat-form-field — passwordMismatch é erro do FormGroup, não do control -->
@@ -111,6 +127,8 @@ export class ResetPasswordComponent implements OnInit {
   private token = '';
   readonly loading = signal(false);
   readonly success = signal(false);
+  readonly showNew = signal(false);
+  readonly showConfirm = signal(false);
   readonly tokenMissing = signal(false);
   readonly errorMsg = signal('');
 

@@ -19,4 +19,14 @@ export class ProfileService {
   changePassword(data: ChangePasswordRequest): Promise<void> {
     return firstValueFrom(this.http.put<void>(`${this.config.rootUrl}/users/me/password`, data));
   }
+
+  uploadAvatar(file: Blob): Promise<void> {
+    const form = new FormData();
+    form.append('file', file, 'avatar.jpg');
+    return firstValueFrom(this.http.post<void>(`${this.config.rootUrl}/users/me/avatar`, form));
+  }
+
+  deleteAvatar(): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`${this.config.rootUrl}/users/me/avatar`));
+  }
 }

@@ -180,11 +180,18 @@ import { HttpErrorResponse } from '@angular/common/http';
             <mat-label>Senha atual</mat-label>
             <input
               matInput
-              type="password"
+              [type]="showCurrentPwd() ? 'text' : 'password'"
               formControlName="currentPassword"
               autocomplete="current-password"
               required
             />
+            <button mat-icon-button matSuffix type="button"
+                    (mousedown)="showCurrentPwd.set(true)"
+                    (mouseup)="showCurrentPwd.set(false)"
+                    (mouseleave)="showCurrentPwd.set(false)"
+                    aria-label="Mostrar senha atual">
+              <mat-icon class="!text-[18px]">{{ showCurrentPwd() ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
             @if (
               passwordForm.get('currentPassword')?.hasError('required') &&
               passwordForm.get('currentPassword')?.touched
@@ -197,11 +204,18 @@ import { HttpErrorResponse } from '@angular/common/http';
             <mat-label>Nova senha</mat-label>
             <input
               matInput
-              type="password"
+              [type]="showNewPwd() ? 'text' : 'password'"
               formControlName="newPassword"
               autocomplete="new-password"
               required
             />
+            <button mat-icon-button matSuffix type="button"
+                    (mousedown)="showNewPwd.set(true)"
+                    (mouseup)="showNewPwd.set(false)"
+                    (mouseleave)="showNewPwd.set(false)"
+                    aria-label="Mostrar nova senha">
+              <mat-icon class="!text-[18px]">{{ showNewPwd() ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
             @if (
               (passwordForm.get('newPassword')?.hasError('minlength') || passwordForm.get('newPassword')?.hasError('passwordPolicy')) &&
               passwordForm.get('newPassword')?.touched
@@ -215,11 +229,18 @@ import { HttpErrorResponse } from '@angular/common/http';
             <mat-label>Confirmar nova senha</mat-label>
             <input
               matInput
-              type="password"
+              [type]="showConfirmPwd() ? 'text' : 'password'"
               formControlName="confirmPassword"
               autocomplete="new-password"
               required
             />
+            <button mat-icon-button matSuffix type="button"
+                    (mousedown)="showConfirmPwd.set(true)"
+                    (mouseup)="showConfirmPwd.set(false)"
+                    (mouseleave)="showConfirmPwd.set(false)"
+                    aria-label="Mostrar confirmação">
+              <mat-icon class="!text-[18px]">{{ showConfirmPwd() ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
           </mat-form-field>
 
           @if (
@@ -242,6 +263,59 @@ import { HttpErrorResponse } from '@angular/common/http';
             </button>
           </div>
         </form>
+
+        <!-- Modal de confirmação com 2FA + logout de dispositivos -->
+        @if (showPwdModal()) {
+          <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+               (click)="showPwdModal.set(false)">
+            <div class="bg-[var(--surface-color)] border border-[var(--border-color)] rounded-2xl p-6 w-full max-w-sm shadow-2xl mx-4"
+                 (click)="$event.stopPropagation()">
+              <h4 class="text-base font-semibold text-[var(--text-primary)] mt-0 mb-4">
+                Confirmar troca de senha
+              </h4>
+
+              @if (totpEnabled()) {
+                <p class="text-sm text-[var(--text-secondary)] mb-3">
+                  Insira o código do seu app autenticador para confirmar.
+                </p>
+                <mat-form-field appearance="outline" class="w-full">
+                  <mat-label>Código 2FA (6 dígitos)</mat-label>
+                  <input matInput maxlength="6" inputmode="numeric" autocomplete="one-time-code"
+                         [value]="pwdModalTotpCode()"
+                         (input)="pwdModalTotpCode.set($any($event.target).value)" />
+                </mat-form-field>
+              }
+
+              <label class="flex items-center gap-3 cursor-pointer mt-2 mb-4">
+                <input type="checkbox"
+                       class="w-4 h-4 accent-[var(--active-color)] cursor-pointer"
+                       [checked]="pwdModalLogoutDevices()"
+                       (change)="pwdModalLogoutDevices.set($any($event.target).checked)" />
+                <span class="text-sm text-[var(--text-primary)]">
+                  Encerrar sessão em outros dispositivos
+                </span>
+              </label>
+
+              @if (pwdModalError()) {
+                <p class="text-red-400 text-sm mb-3">{{ pwdModalError() }}</p>
+              }
+
+              <div class="flex gap-3 justify-end">
+                <button mat-stroked-button type="button" (click)="showPwdModal.set(false)">
+                  Cancelar
+                </button>
+                <button mat-flat-button type="button"
+                        [disabled]="pwdModalLoading()"
+                        (click)="confirmPasswordChange()">
+                  @if (pwdModalLoading()) {
+                    <mat-spinner diameter="18" class="mr-2" />
+                  }
+                  Confirmar
+                </button>
+              </div>
+            </div>
+          </div>
+        }
       </section>
       } <!-- end @else -->
     </div>
@@ -265,6 +339,18 @@ export class ProfileComponent {
   readonly saving = signal(false);
   readonly profileError = signal('');
   readonly savingPwd = signal(false);
+  readonly showCurrentPwd = signal(false);
+  readonly showNewPwd = signal(false);
+  readonly showConfirmPwd = signal(false);
+
+  // Modal de confirmação de troca de senha
+  readonly showPwdModal = signal(false);
+  readonly pwdModalTotpCode = signal('');
+  readonly pwdModalLogoutDevices = signal(false);
+  readonly pwdModalLoading = signal(false);
+  readonly pwdModalError = signal('');
+
+  readonly totpEnabled = computed(() => !!this.store.currentUser()?.totpEnabled);
   readonly passwordError = signal('');
 
   readonly profileForm = this.fb.nonNullable.group({
@@ -285,9 +371,10 @@ export class ProfileComponent {
   constructor() {
     effect(() => {
       const u = this.store.currentUser();
-      if (u && this.profileForm.pristine) {
-        this.profileForm.patchValue({ username: u.username, email: u.email ?? '' });
-      }
+      if (!u) return;
+      // Sempre sincroniza com o store para evitar race condition após login.
+      // emitEvent:false não dispara valueChanges, evitando marcar o form como dirty.
+      this.profileForm.patchValue({ username: u.username, email: u.email ?? '' }, { emitEvent: false });
     });
   }
 
@@ -301,7 +388,7 @@ export class ProfileComponent {
     const reader = new FileReader();
     reader.onload = () => {
       const img = new Image();
-      img.onload = () => {
+      img.onload = async () => {
         const size = 200;
         const canvas = document.createElement('canvas');
         canvas.width = size;
@@ -312,19 +399,36 @@ export class ProfileComponent {
         const sw = size / scale;
         const sh = size / scale;
         ctx.drawImage(img, (img.width - sw) / 2, (img.height - sh) / 2, sw, sh, 0, 0, size, size);
-        this.avatarService.setAvatar(canvas.toDataURL('image/jpeg', 0.85));
-        this.snackBar.open('Foto atualizada!', 'OK', { duration: 2500 });
+
+        canvas.toBlob(async (blob) => {
+          if (!blob) return;
+          // Cache local imediato para UX responsiva enquanto o upload processa.
+          this.avatarService.setLocalAvatar(canvas.toDataURL('image/jpeg', 0.85));
+          try {
+            await this.profileService.uploadAvatar(blob);
+            await this.authService.loadCurrentUser();
+            this.snackBar.open('Foto atualizada!', 'OK', { duration: 2500 });
+          } catch {
+            this.avatarService.clearLocalAvatar();
+            this.snackBar.open('Erro ao enviar foto. Tente novamente.', 'Fechar', { duration: 4000 });
+          }
+        }, 'image/jpeg', 0.85);
       };
       img.src = reader.result as string;
     };
     reader.readAsDataURL(file);
-    // Reset so same file can be re-selected
     (event.target as HTMLInputElement).value = '';
   }
 
-  removeAvatar(): void {
-    this.avatarService.removeAvatar();
-    this.snackBar.open('Foto removida.', 'OK', { duration: 2500 });
+  async removeAvatar(): Promise<void> {
+    try {
+      await this.profileService.deleteAvatar();
+      this.avatarService.clearLocalAvatar();
+      await this.authService.loadCurrentUser();
+      this.snackBar.open('Foto removida.', 'OK', { duration: 2500 });
+    } catch {
+      this.snackBar.open('Erro ao remover foto. Tente novamente.', 'Fechar', { duration: 4000 });
+    }
   }
 
   async saveProfile(): Promise<void> {
@@ -360,21 +464,52 @@ export class ProfileComponent {
     }
   }
 
-  async changePassword(): Promise<void> {
+  changePassword(): void {
     if (this.passwordForm.invalid) return;
+    if (this.totpEnabled()) {
+      // Abre modal para coletar código 2FA e escolha de logout
+      this.pwdModalTotpCode.set('');
+      this.pwdModalLogoutDevices.set(false);
+      this.pwdModalError.set('');
+      this.showPwdModal.set(true);
+    } else {
+      void this.executePasswordChange();
+    }
+  }
+
+  async confirmPasswordChange(): Promise<void> {
+    if (this.totpEnabled() && this.pwdModalTotpCode().length !== 6) {
+      this.pwdModalError.set('Informe o código de 6 dígitos do seu app autenticador.');
+      return;
+    }
+    this.pwdModalLoading.set(true);
+    this.pwdModalError.set('');
+    await this.executePasswordChange(this.pwdModalTotpCode() || undefined);
+    if (!this.pwdModalError()) {
+      this.showPwdModal.set(false);
+      if (this.pwdModalLogoutDevices()) {
+        await this.authService.logout();
+      }
+    }
+    this.pwdModalLoading.set(false);
+  }
+
+  private async executePasswordChange(totpCode?: string): Promise<void> {
     this.savingPwd.set(true);
     this.passwordError.set('');
     const { currentPassword, newPassword } = this.passwordForm.getRawValue();
     try {
-      await this.profileService.changePassword({ currentPassword, newPassword });
+      await this.profileService.changePassword({ currentPassword, newPassword, totpCode });
       this.passwordForm.reset();
       this.snackBar.open('Senha alterada com sucesso!', 'OK', { duration: 3000 });
     } catch (err) {
-      if (err instanceof HttpErrorResponse && (err.status === 401 || err.status === 403)) {
-        this.passwordError.set('Senha atual incorreta.');
-      } else {
-        this.passwordError.set('Erro ao alterar senha. Tente novamente.');
-      }
+      const msg = err instanceof HttpErrorResponse && (err.status === 401 || err.status === 403)
+        ? 'Senha atual incorreta.'
+        : err instanceof HttpErrorResponse && err.status === 400
+          ? 'Código 2FA inválido ou expirado.'
+          : 'Erro ao alterar senha. Tente novamente.';
+      this.passwordError.set(msg);
+      this.pwdModalError.set(msg);
     } finally {
       this.savingPwd.set(false);
     }

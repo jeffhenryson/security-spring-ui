@@ -56,6 +56,12 @@ describe('AuthService', () => {
     localStorage.clear();
   });
 
+  // Flush helper: após handleTokenPair, loadCurrentUser abre /users/me e /auth/2fa/status em paralelo
+  function flushLoadCurrentUser(totpEnabled = false) {
+    controller.expectOne(`${API}/users/me`).flush(MOCK_USER);
+    controller.expectOne(`${API}/auth/2fa/status`).flush({ enabled: totpEnabled });
+  }
+
   // ── login ─────────────────────────────────────────────────────────────────
 
   describe('login', () => {
@@ -65,7 +71,7 @@ describe('AuthService', () => {
       controller.expectOne(`${API}/auth/login`).flush(TOKEN_PAIR);
       await flushPromises(); // aguarda handleTokenPair → loadCurrentUser
 
-      controller.expectOne(`${API}/users/me`).flush(MOCK_USER);
+      flushLoadCurrentUser();
       await promise;
 
       expect(store.accessToken()).toBe('access-abc');
@@ -106,7 +112,7 @@ describe('AuthService', () => {
       controller.expectOne(`${API}/auth/2fa/verify`).flush(TOKEN_PAIR);
       await flushPromises();
 
-      controller.expectOne(`${API}/users/me`).flush(MOCK_USER);
+      flushLoadCurrentUser();
       await promise;
 
       expect(store.accessToken()).toBe('access-abc');
@@ -170,7 +176,7 @@ describe('AuthService', () => {
       controller.expectOne(`${API}/auth/refresh`).flush(TOKEN_PAIR);
       await flushPromises();
 
-      controller.expectOne(`${API}/users/me`).flush(MOCK_USER);
+      flushLoadCurrentUser();
       await promise;
 
       expect(store.accessToken()).toBe('access-abc');
@@ -207,7 +213,7 @@ describe('AuthService', () => {
       reqs[0].flush(TOKEN_PAIR);
 
       await flushPromises();
-      controller.expectOne(`${API}/users/me`).flush(MOCK_USER);
+      flushLoadCurrentUser();
 
       await Promise.all([p1, p2]);
 
@@ -220,9 +226,10 @@ describe('AuthService', () => {
   describe('loadCurrentUser', () => {
     it('deve carregar e setar o usuário atual na store', async () => {
       const promise = service.loadCurrentUser();
-      controller.expectOne(`${API}/users/me`).flush(MOCK_USER);
+      flushLoadCurrentUser(true);
       await promise;
-      expect(store.currentUser()).toEqual(MOCK_USER);
+      expect(store.currentUser()?.username).toBe('alice');
+      expect(store.currentUser()?.totpEnabled).toBe(true);
     });
 
     it('deve propagar erro quando /users/me falha', async () => {
@@ -230,6 +237,8 @@ describe('AuthService', () => {
       controller
         .expectOne(`${API}/users/me`)
         .flush('Forbidden', { status: 403, statusText: 'Forbidden' });
+      // /auth/2fa/status pode ou não ter sido aberto (Promise.all aborta no primeiro erro)
+      controller.match(`${API}/auth/2fa/status`).forEach((r) => r.flush({ enabled: false }));
       await expect(promise).rejects.toBeTruthy();
     });
   });

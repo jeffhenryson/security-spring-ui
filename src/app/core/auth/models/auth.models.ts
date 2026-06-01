@@ -17,9 +17,10 @@ import type { TokenPairResponse } from '../../../api/models/token-pair-response'
 import type { TwoFactorChallengeResponse } from '../../../api/models/two-factor-challenge-response';
 import type { UserResponse } from '../../../api/models/user-response';
 
-/** User currently logged in — extends UserResponse with TOTP flag not returned by the API */
+/** User currently logged in — extends UserResponse with fields not in the generated model */
 export interface CurrentUser extends UserResponse {
   totpEnabled?: boolean;
+  avatarUrl?: string | null;
 }
 
 export type LoginResponse = TokenPairResponse | TwoFactorChallengeResponse;

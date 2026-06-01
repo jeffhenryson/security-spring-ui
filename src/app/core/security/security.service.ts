@@ -43,4 +43,10 @@ export class SecurityService {
       this.http.post<TotpConfirmResponse>(`${this.config.rootUrl}/auth/2fa/backup-codes/regenerate`, { currentPassword }),
     );
   }
+
+  replaceTotp(currentTotpCode: string): Promise<TotpSetupResponse> {
+    return firstValueFrom(
+      this.http.post<TotpSetupResponse>(`${this.config.rootUrl}/auth/2fa/replace`, { currentTotpCode }),
+    );
+  }
 }

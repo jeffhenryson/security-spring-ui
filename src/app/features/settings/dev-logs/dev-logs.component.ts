@@ -15,12 +15,22 @@ import { AuditLogsService, AuditLogResponse, AuditLogFilters } from '../../../co
 import { EmptyStateComponent } from '../../../shared/empty-state/empty-state.component';
 import { PagedState } from '../../../core/admin/paged-state';
 
+// Eventos com badge de alerta vermelho — indicam incidentes de segurança
+const CRITICAL_EVENTS = new Set([
+  'TOKEN_THEFT_DETECTED',
+  'ACCOUNT_LOCKED',
+  'LOGIN_FAILED',
+  'DEV_ELEVATION_COMPLETED',
+]);
+
 const ACTION_COLORS: Record<string, string> = {
   USER_LOGGED_IN: 'bg-blue-950 text-blue-300',
   USER_LOGGED_OUT: 'bg-blue-950 text-blue-400',
   LOGIN_FAILED: 'bg-orange-950 text-orange-300',
   ACCOUNT_LOCKED: 'bg-red-950 text-red-300',
-  TOKEN_THEFT_DETECTED: 'bg-red-950 text-red-300',
+  TOKEN_THEFT_DETECTED: 'bg-red-950 text-red-200',
+  DEV_ELEVATION_COMPLETED: 'bg-amber-950 text-amber-300',
+  USER_SESSIONS_CLEARED: 'bg-orange-950 text-orange-300',
   USER_REGISTERED: 'bg-green-950 text-green-300',
   USER_CREATED: 'bg-green-950 text-green-300',
   USER_DELETED: 'bg-red-950 text-red-400',
@@ -32,7 +42,6 @@ const ACTION_COLORS: Record<string, string> = {
   USER_PASSWORD_CHANGED: 'bg-yellow-950 text-yellow-300',
   USER_EMAIL_CHANGED: 'bg-yellow-950 text-yellow-300',
   USER_EMAIL_VERIFIED: 'bg-green-950 text-green-300',
-  USER_SESSIONS_CLEARED: 'bg-orange-950 text-orange-300',
   ROLE_CREATED: 'bg-violet-950 text-violet-300',
   ROLE_DELETED: 'bg-red-950 text-red-300',
   PERMISSION_CREATED: 'bg-emerald-950 text-emerald-300',
@@ -42,21 +51,17 @@ const ACTION_COLORS: Record<string, string> = {
   TOTP_ENABLED: 'bg-teal-950 text-teal-300',
   TOTP_DISABLED: 'bg-teal-950 text-teal-400',
   TOTP_BACKUP_CODES_REGENERATED: 'bg-teal-950 text-teal-300',
+  TOTP_REPLACED: 'bg-teal-950 text-teal-300',
   PASSWORD_RESET_REQUESTED: 'bg-yellow-950 text-yellow-300',
   PASSWORD_RESET_COMPLETED: 'bg-green-950 text-green-300',
   EMAIL_CHANGE_REQUESTED: 'bg-yellow-950 text-yellow-300',
   EMAIL_CHANGE_CONFIRMED: 'bg-green-950 text-green-300',
 };
 
-// Eventos exclusivos da view DEV — não aparecem no filtro do ADMIN
-const DEV_ONLY_EVENTS = new Set(['LOGIN_FAILED', 'ACCOUNT_LOCKED', 'TOKEN_THEFT_DETECTED']);
-
-const KNOWN_ACTIONS = Object.keys(ACTION_COLORS)
-  .filter((a) => !DEV_ONLY_EVENTS.has(a))
-  .sort();
+const ALL_ACTIONS = Object.keys(ACTION_COLORS).sort();
 
 @Component({
-  selector: 'app-audit-logs',
+  selector: 'app-dev-logs',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
@@ -74,7 +79,12 @@ const KNOWN_ACTIONS = Object.keys(ACTION_COLORS)
   template: `
     <div class="p-6 max-w-5xl mx-auto flex flex-col gap-6">
       <div class="flex items-center justify-between">
-        <h3 class="text-base font-semibold text-[var(--text-primary)] m-0">Logs de auditoria</h3>
+        <div class="flex items-center gap-2">
+          <h3 class="text-base font-semibold text-[var(--text-primary)] m-0">Logs técnicos</h3>
+          <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+            DEV
+          </span>
+        </div>
         <button
           mat-stroked-button
           (click)="exportCsv()"
@@ -95,10 +105,10 @@ const KNOWN_ACTIONS = Object.keys(ACTION_COLORS)
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="w-full !pb-0">
-          <mat-label>Tipo de ação</mat-label>
+          <mat-label>Tipo de evento</mat-label>
           <mat-icon matPrefix class="!text-[var(--text-secondary)]">filter_list</mat-icon>
           <mat-select [formControl]="actionControl">
-            <mat-option value="">Todas as ações</mat-option>
+            <mat-option value="">Todos os eventos</mat-option>
             @for (action of availableActions; track action) {
               <mat-option [value]="action">{{ action }}</mat-option>
             }
@@ -106,9 +116,7 @@ const KNOWN_ACTIONS = Object.keys(ACTION_COLORS)
         </mat-form-field>
       </div>
 
-      <div
-        class="bg-[var(--surface-color)] border border-[var(--border-color)] rounded-xl overflow-hidden"
-      >
+      <div class="bg-[var(--surface-color)] border border-[var(--border-color)] rounded-xl overflow-hidden">
         @if (paged.loading()) {
           <div class="divide-y divide-[var(--border-color)]">
             @for (i of skeletonRows; track i) {
@@ -121,52 +129,49 @@ const KNOWN_ACTIONS = Object.keys(ACTION_COLORS)
             }
           </div>
         } @else if (paged.rows().length === 0) {
-          <app-empty-state message="Nenhum log encontrado." icon="history" />
+          <app-empty-state message="Nenhum log encontrado." icon="terminal" />
         } @else {
           <div class="overflow-x-auto">
-            <table mat-table [dataSource]="paged.rows()" class="w-full" aria-label="Logs de auditoria">
+            <table mat-table [dataSource]="paged.rows()" class="w-full" aria-label="Logs técnicos">
               <ng-container matColumnDef="timestamp">
-                <th mat-header-cell *matHeaderCellDef class="!text-[var(--text-secondary)] !text-xs !pl-6">
-                  Data/hora
-                </th>
+                <th mat-header-cell *matHeaderCellDef class="!text-[var(--text-secondary)] !text-xs !pl-6">Data/hora</th>
                 <td mat-cell *matCellDef="let l" class="!text-[var(--text-secondary)] !text-xs !pl-6 whitespace-nowrap">
                   {{ fmt(l.timestamp) }}
                 </td>
               </ng-container>
 
               <ng-container matColumnDef="action">
-                <th mat-header-cell *matHeaderCellDef class="!text-[var(--text-secondary)] !text-xs">
-                  Ação
-                </th>
+                <th mat-header-cell *matHeaderCellDef class="!text-[var(--text-secondary)] !text-xs">Evento</th>
                 <td mat-cell *matCellDef="let l" class="!py-2">
-                  <span class="px-2 py-0.5 rounded text-xs font-mono font-medium {{ badgeClass(l.action) }}">
-                    {{ l.action }}
-                  </span>
+                  <div class="flex items-center gap-1.5">
+                    @if (isCritical(l.action)) {
+                      <mat-icon class="!text-[14px] !w-[14px] !h-[14px] text-red-400" matTooltip="Evento crítico de segurança">
+                        warning
+                      </mat-icon>
+                    }
+                    <span class="px-2 py-0.5 rounded text-xs font-mono font-medium {{ badgeClass(l.action) }}">
+                      {{ l.action }}
+                    </span>
+                  </div>
                 </td>
               </ng-container>
 
               <ng-container matColumnDef="who">
-                <th mat-header-cell *matHeaderCellDef class="!text-[var(--text-secondary)] !text-xs">
-                  Autor
-                </th>
+                <th mat-header-cell *matHeaderCellDef class="!text-[var(--text-secondary)] !text-xs">Autor</th>
                 <td mat-cell *matCellDef="let l" class="!text-[var(--text-primary)] !text-sm !font-medium">
                   {{ l.who }}
                 </td>
               </ng-container>
 
               <ng-container matColumnDef="target">
-                <th mat-header-cell *matHeaderCellDef class="!text-[var(--text-secondary)] !text-xs">
-                  Alvo
-                </th>
+                <th mat-header-cell *matHeaderCellDef class="!text-[var(--text-secondary)] !text-xs">Alvo</th>
                 <td mat-cell *matCellDef="let l" class="!text-[var(--text-secondary)] !text-sm">
                   {{ l.target ?? '—' }}
                 </td>
               </ng-container>
 
               <ng-container matColumnDef="ipAddress">
-                <th mat-header-cell *matHeaderCellDef class="!text-[var(--text-secondary)] !text-xs">
-                  IP
-                </th>
+                <th mat-header-cell *matHeaderCellDef class="!text-[var(--text-secondary)] !text-xs">IP</th>
                 <td
                   mat-cell
                   *matCellDef="let l"
@@ -181,7 +186,7 @@ const KNOWN_ACTIONS = Object.keys(ACTION_COLORS)
               <tr
                 mat-row
                 *matRowDef="let row; columns: cols"
-                class="hover:bg-[var(--surface-hover)] transition-colors"
+                [class]="isCritical(row.action) ? 'hover:bg-red-950/30 transition-colors' : 'hover:bg-[var(--surface-hover)] transition-colors'"
               ></tr>
             </table>
           </div>
@@ -197,7 +202,7 @@ const KNOWN_ACTIONS = Object.keys(ACTION_COLORS)
     </div>
   `,
 })
-export class AuditLogsComponent implements OnInit {
+export class DevLogsComponent implements OnInit {
   private readonly auditLogsService = inject(AuditLogsService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly fb = inject(FormBuilder);
@@ -206,7 +211,7 @@ export class AuditLogsComponent implements OnInit {
   readonly cols = ['timestamp', 'action', 'who', 'target', 'ipAddress'];
   readonly paged = new PagedState<AuditLogResponse>();
   readonly skeletonRows = Array(8).fill(0);
-  readonly availableActions = KNOWN_ACTIONS;
+  readonly availableActions = ALL_ACTIONS;
 
   readonly userIdControl = this.fb.control('');
   readonly actionControl = this.fb.control('');
@@ -232,7 +237,7 @@ export class AuditLogsComponent implements OnInit {
       const res = await this.auditLogsService.list(this.paged.page(), this.paged.size(), filters);
       this.paged.apply(res);
     } catch {
-      this.snackBar.open('Erro ao carregar logs de auditoria.', 'OK', { duration: 3000 });
+      this.snackBar.open('Erro ao carregar logs técnicos.', 'OK', { duration: 3000 });
     } finally {
       this.paged.loading.set(false);
     }
@@ -241,6 +246,10 @@ export class AuditLogsComponent implements OnInit {
   onPage(e: import('@angular/material/paginator').PageEvent): void {
     this.paged.onPage(e);
     this.load();
+  }
+
+  isCritical(action: string): boolean {
+    return CRITICAL_EVENTS.has(action);
   }
 
   badgeClass(action: string): string {
@@ -252,26 +261,22 @@ export class AuditLogsComponent implements OnInit {
     if (!rows.length) return;
     const header = 'timestamp,action,who,target,ipAddress';
     const escape = (v: string | null | undefined) => `"${(v ?? '').replace(/"/g, '""')}"`;
-    const lines = rows.map(l =>
+    const lines = rows.map((l) =>
       [escape(l.timestamp), escape(l.action), escape(l.who), escape(l.target), escape(l.ipAddress)].join(','),
     );
     const blob = new Blob([[header, ...lines].join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `dev-logs-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
 
   fmt(iso: string): string {
     return new Date(iso).toLocaleString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
     });
   }
 }

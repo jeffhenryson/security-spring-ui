@@ -7,6 +7,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../../core/auth/auth.service';
 import { passwordMatchValidator } from '../../../core/validators/password.validators';
 import { PasswordStrengthComponent } from '../../../shared/password-strength/password-strength.component';
@@ -23,6 +24,7 @@ import { environment } from '../../../../environments/environment';
     MatInputModule,
     MatButtonModule,
     MatProgressSpinnerModule,
+    MatIconModule,
     PasswordStrengthComponent,
   ],
   template: `
@@ -79,12 +81,19 @@ import { environment } from '../../../../environments/environment';
               <mat-label>Senha</mat-label>
               <input
                 matInput
-                type="password"
+                [type]="showPwd() ? 'text' : 'password'"
                 formControlName="password"
                 autocomplete="new-password"
                 required
                 aria-describedby="reg-password-error"
               />
+              <button mat-icon-button matSuffix type="button"
+                      (mousedown)="showPwd.set(true)"
+                      (mouseup)="showPwd.set(false)"
+                      (mouseleave)="showPwd.set(false)"
+                      [attr.aria-label]="showPwd() ? 'Ocultar senha' : 'Mostrar senha'">
+                <mat-icon class="!text-[18px]">{{ showPwd() ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
               @if (form.get('password')?.hasError('minlength') && form.get('password')?.touched) {
                 <mat-error id="reg-password-error">Mínimo 8 caracteres</mat-error>
               }
@@ -95,11 +104,18 @@ import { environment } from '../../../../environments/environment';
               <mat-label>Confirmar senha</mat-label>
               <input
                 matInput
-                type="password"
+                [type]="showConfirm() ? 'text' : 'password'"
                 formControlName="confirmPassword"
                 autocomplete="new-password"
                 required
               />
+              <button mat-icon-button matSuffix type="button"
+                      (mousedown)="showConfirm.set(true)"
+                      (mouseup)="showConfirm.set(false)"
+                      (mouseleave)="showConfirm.set(false)"
+                      aria-label="Mostrar confirmação de senha">
+                <mat-icon class="!text-[18px]">{{ showConfirm() ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
             </mat-form-field>
 
             <!-- Erro de grupo fica fora do mat-form-field para ser exibido corretamente -->
@@ -169,6 +185,8 @@ export class RegisterComponent {
   readonly loading = signal(false);
   readonly success = signal(false);
   readonly errorMsg = signal('');
+  readonly showPwd = signal(false);
+  readonly showConfirm = signal(false);
 
   readonly form = this.fb.nonNullable.group(
     {

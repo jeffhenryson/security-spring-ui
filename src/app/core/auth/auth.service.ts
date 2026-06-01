@@ -114,8 +114,12 @@ export class AuthService {
   }
 
   async loadCurrentUser(): Promise<void> {
-    const user = await firstValueFrom(this.http.get<CurrentUser>(`${this.api}/users/me`));
-    this.store.setCurrentUser(user);
+    const [user, totp] = await Promise.all([
+      firstValueFrom(this.http.get<CurrentUser>(`${this.api}/users/me`)),
+      firstValueFrom(this.http.get<{ enabled: boolean }>(`${this.api}/auth/2fa/status`))
+        .catch(() => ({ enabled: false })),
+    ]);
+    this.store.setCurrentUser({ ...user, totpEnabled: totp.enabled });
   }
 
   async register(username: string, email: string, password: string): Promise<void> {

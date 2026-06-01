@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { permissionGuard } from '../../core/rbac/permission.guard';
+import { devElevationGuard } from '../../core/rbac/dev-elevation.guard';
 import { PERMISSIONS } from '../../core/rbac/permissions.constants';
 
 export const settingsRoutes: Routes = [
@@ -40,8 +41,8 @@ export const settingsRoutes: Routes = [
       },
       {
         path: 'permissions',
-        canMatch: [permissionGuard(PERMISSIONS.PERMISSION_READ)],
-        data: { title: 'Permissões', preloadPermission: PERMISSIONS.PERMISSION_READ },
+        canMatch: [permissionGuard(PERMISSIONS.DEV_PERMISSION_MANAGE), devElevationGuard],
+        data: { title: 'Permissões', preloadPermission: PERMISSIONS.DEV_PERMISSION_MANAGE },
         loadComponent: () =>
           import('./permissions/permissions.component').then((m) => m.PermissionsComponent),
       },
@@ -51,6 +52,21 @@ export const settingsRoutes: Routes = [
         data: { title: 'Logs de auditoria', preloadPermission: PERMISSIONS.AUDIT_READ },
         loadComponent: () =>
           import('./audit-logs/audit-logs.component').then((m) => m.AuditLogsComponent),
+      },
+      // Rotas exclusivas da área DEV — exigem elevação ativa (devElevationGuard)
+      {
+        path: 'dev-logs',
+        canMatch: [permissionGuard(PERMISSIONS.DEV_LOGS_TECHNICAL), devElevationGuard],
+        data: { title: 'Logs técnicos', preloadPermission: PERMISSIONS.DEV_LOGS_TECHNICAL },
+        loadComponent: () =>
+          import('./dev-logs/dev-logs.component').then((m) => m.DevLogsComponent),
+      },
+      {
+        path: 'dev-system',
+        canMatch: [permissionGuard(PERMISSIONS.DEV_SYSTEM_CONFIG), devElevationGuard],
+        data: { title: 'Sistema', preloadPermission: PERMISSIONS.DEV_SYSTEM_CONFIG },
+        loadComponent: () =>
+          import('./dev-system/dev-system.component').then((m) => m.DevSystemComponent),
       },
       { path: '**', redirectTo: 'profile' },
     ],

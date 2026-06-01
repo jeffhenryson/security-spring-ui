@@ -8,21 +8,23 @@ export class AvatarService {
   private readonly store = inject(AuthStore);
   private readonly _tick = signal(0);
 
+  // Prefere avatarUrl do backend; fallback para localStorage (cache local).
   readonly currentAvatar = computed(() => {
     this._tick();
-    const userId = this.store.currentUser()?.id;
-    if (!userId) return null;
-    return localStorage.getItem(`${AVATAR_KEY_PREFIX}${userId}`);
+    const user = this.store.currentUser();
+    if (!user) return null;
+    if (user.avatarUrl) return user.avatarUrl;
+    return localStorage.getItem(`${AVATAR_KEY_PREFIX}${user.id}`);
   });
 
-  setAvatar(dataUrl: string): void {
+  setLocalAvatar(dataUrl: string): void {
     const userId = this.store.currentUser()?.id;
     if (!userId) return;
     localStorage.setItem(`${AVATAR_KEY_PREFIX}${userId}`, dataUrl);
     this._tick.update((n) => n + 1);
   }
 
-  removeAvatar(): void {
+  clearLocalAvatar(): void {
     const userId = this.store.currentUser()?.id;
     if (!userId) return;
     localStorage.removeItem(`${AVATAR_KEY_PREFIX}${userId}`);

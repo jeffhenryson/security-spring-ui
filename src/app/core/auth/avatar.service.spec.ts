@@ -36,34 +36,34 @@ describe('AvatarService', () => {
     expect(service.currentAvatar()).toBeNull();
   });
 
-  it('setAvatar armazena o dataUrl no localStorage e atualiza o signal', () => {
+  it('setLocalAvatar armazena o dataUrl no localStorage e atualiza o signal', () => {
     store.setCurrentUser(MOCK_USER);
-    service.setAvatar('data:image/jpeg;base64,abc');
+    service.setLocalAvatar('data:image/jpeg;base64,abc');
     expect(service.currentAvatar()).toBe('data:image/jpeg;base64,abc');
     expect(localStorage.getItem(`${AVATAR_KEY_PREFIX}42`)).toBe('data:image/jpeg;base64,abc');
   });
 
-  it('removeAvatar limpa o localStorage e o signal', () => {
+  it('clearLocalAvatar limpa o localStorage e o signal', () => {
     store.setCurrentUser(MOCK_USER);
-    service.setAvatar('data:image/jpeg;base64,abc');
-    service.removeAvatar();
+    service.setLocalAvatar('data:image/jpeg;base64,abc');
+    service.clearLocalAvatar();
     expect(service.currentAvatar()).toBeNull();
     expect(localStorage.getItem(`${AVATAR_KEY_PREFIX}42`)).toBeNull();
   });
 
-  it('setAvatar sem usuário logado não faz nada', () => {
-    service.setAvatar('data:image/jpeg;base64,abc');
+  it('setLocalAvatar sem usuário logado não faz nada', () => {
+    service.setLocalAvatar('data:image/jpeg;base64,abc');
     expect(service.currentAvatar()).toBeNull();
     expect(localStorage.getItem(`${AVATAR_KEY_PREFIX}42`)).toBeNull();
   });
 
-  it('removeAvatar sem usuário logado não causa erro', () => {
-    expect(() => service.removeAvatar()).not.toThrow();
+  it('clearLocalAvatar sem usuário logado não causa erro', () => {
+    expect(() => service.clearLocalAvatar()).not.toThrow();
   });
 
   it('não vaza avatar entre usuários diferentes', () => {
     store.setCurrentUser(MOCK_USER);
-    service.setAvatar('data:image/jpeg;base64,user42');
+    service.setLocalAvatar('data:image/jpeg;base64,user42');
 
     store.setCurrentUser({ ...MOCK_USER, id: 99 });
     expect(service.currentAvatar()).toBeNull();

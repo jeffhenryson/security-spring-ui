@@ -6,6 +6,7 @@ import { MAT_SNACK_BAR_DEFAULT_OPTIONS } from '@angular/material/snack-bar';
 import { createErrorHandler } from '@sentry/angular';
 import { routes } from './app.routes';
 import { authInterceptor } from './core/auth/auth.interceptor';
+import { devAuthInterceptor } from './core/http/dev-auth.interceptor';
 import { globalErrorInterceptor } from './core/http/global-error.interceptor';
 import { AuthService } from './core/auth/auth.service';
 import { ThemeService } from './core/theme/theme.service';
@@ -30,7 +31,7 @@ export const appConfig: ApplicationConfig = {
     { provide: TitleStrategy, useClass: AppTitleStrategy },
     provideAnimationsAsync(),
     provideHttpClient(
-      withInterceptors([authInterceptor, globalErrorInterceptor]),
+      withInterceptors([devAuthInterceptor, authInterceptor, globalErrorInterceptor]),
       withXsrfConfiguration({ cookieName: 'XSRF-TOKEN', headerName: 'X-XSRF-TOKEN' }),
     ),
     {

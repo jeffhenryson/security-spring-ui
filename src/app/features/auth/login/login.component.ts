@@ -5,13 +5,16 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AuthService } from '../../../core/auth/auth.service';
+import { HttpErrorResponse } from '@angular/common/http';
 import { isTwoFactorChallenge } from '../../../core/auth/models/auth.models';
 import { environment } from '../../../../environments/environment';
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS = 30_000;
+const LOCKOUT_STORAGE_KEY = 'ss_login_lockout';
 
 @Component({
   selector: 'app-login',
@@ -24,6 +27,7 @@ const LOCKOUT_MS = 30_000;
     MatInputModule,
     MatButtonModule,
     MatProgressSpinnerModule,
+    MatIconModule,
   ],
   template: `
     <div class="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
@@ -52,7 +56,7 @@ const LOCKOUT_MS = 30_000;
             <mat-label>Senha</mat-label>
             <input
               matInput
-              type="password"
+              [type]="showPwd() ? 'text' : 'password'"
               formControlName="password"
               autocomplete="current-password"
               required
@@ -60,6 +64,13 @@ const LOCKOUT_MS = 30_000;
               (keyup)="checkCapsLock($event)"
               (keydown)="checkCapsLock($event)"
             />
+            <button mat-icon-button matSuffix type="button"
+                    (mousedown)="showPwd.set(true)"
+                    (mouseup)="showPwd.set(false)"
+                    (mouseleave)="showPwd.set(false)"
+                    [attr.aria-label]="showPwd() ? 'Ocultar senha' : 'Mostrar senha'">
+              <mat-icon class="!text-[18px]">{{ showPwd() ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
             @if (form.get('password')?.hasError('required') && form.get('password')?.touched) {
               <mat-error id="login-password-error">Campo obrigatório</mat-error>
             }
@@ -147,8 +158,11 @@ export class LoginComponent {
   readonly loading = signal(false);
   readonly errorMsg = signal('');
   readonly capsLockOn = signal(false);
+  readonly showPwd = signal(false);
   readonly failedAttempts = signal(0);
-  readonly lockedUntil = signal(0);
+  readonly lockedUntil = signal(
+    Math.max(0, parseInt(localStorage.getItem(LOCKOUT_STORAGE_KEY) ?? '0', 10)),
+  );
   readonly lockoutSecondsLeft = computed(() =>
     Math.max(0, Math.ceil((this.lockedUntil() - Date.now()) / 1000)),
   );
@@ -183,6 +197,17 @@ export class LoginComponent {
     this.capsLockOn.set(event.getModifierState('CapsLock'));
   }
 
+  private applyLockout(durationMs: number): void {
+    const until = Date.now() + durationMs;
+    this.lockedUntil.set(until);
+    localStorage.setItem(LOCKOUT_STORAGE_KEY, String(until));
+    if (this.lockoutTimer !== null) clearTimeout(this.lockoutTimer);
+    this.lockoutTimer = setTimeout(() => {
+      this.lockedUntil.set(0);
+      localStorage.removeItem(LOCKOUT_STORAGE_KEY);
+    }, durationMs);
+  }
+
   async onSubmit(): Promise<void> {
     if (this.form.invalid || this.lockedUntil() > Date.now()) return;
     this.loading.set(true);
@@ -200,17 +225,22 @@ export class LoginComponent {
         const dest = raw.startsWith('/') && !raw.startsWith('//') ? raw : '/app/dashboard';
         this.router.navigateByUrl(dest);
       }
-    } catch {
-      const attempts = this.failedAttempts() + 1;
-      this.failedAttempts.set(attempts);
-      if (attempts >= MAX_ATTEMPTS) {
-        this.lockedUntil.set(Date.now() + LOCKOUT_MS);
-        this.failedAttempts.set(0);
-        if (this.lockoutTimer !== null) clearTimeout(this.lockoutTimer);
-        this.lockoutTimer = setTimeout(() => this.lockedUntil.set(0), LOCKOUT_MS);
+    } catch (err) {
+      // HTTP 429 do backend: usar Retry-After se disponível
+      if (err instanceof HttpErrorResponse && err.status === 429) {
+        const retryAfterSec = parseInt(err.headers.get('Retry-After') ?? '60', 10);
+        this.applyLockout(retryAfterSec * 1000);
         this.errorMsg.set('');
       } else {
-        this.errorMsg.set('Usuário ou senha inválidos.');
+        const attempts = this.failedAttempts() + 1;
+        this.failedAttempts.set(attempts);
+        if (attempts >= MAX_ATTEMPTS) {
+          this.applyLockout(LOCKOUT_MS);
+          this.failedAttempts.set(0);
+          this.errorMsg.set('');
+        } else {
+          this.errorMsg.set('Usuário ou senha inválidos.');
+        }
       }
     } finally {
       this.loading.set(false);
