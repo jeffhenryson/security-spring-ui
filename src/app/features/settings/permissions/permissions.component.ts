@@ -1,9 +1,8 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { debounceTime, distinctUntilChanged, firstValueFrom } from 'rxjs';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { firstValueFrom } from 'rxjs';
 import { MatTableModule } from '@angular/material/table';
-import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
@@ -18,7 +17,6 @@ import { runWithFeedback, httpErrMsg } from '../../../core/admin/admin-feedback'
 import { PERMISSIONS } from '../../../core/rbac/permissions.constants';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { EmptyStateComponent } from '../../../shared/empty-state/empty-state.component';
-import { PagedState } from '../../../core/admin/paged-state';
 
 @Component({
   selector: 'app-permissions',
@@ -27,7 +25,6 @@ import { PagedState } from '../../../core/admin/paged-state';
   imports: [
     ReactiveFormsModule,
     MatTableModule,
-    MatPaginatorModule,
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
@@ -45,17 +42,11 @@ import { PagedState } from '../../../core/admin/paged-state';
             <mat-form-field appearance="outline" class="flex-1 sm:w-[220px] !pb-0">
               <mat-label>Nome da permissão</mat-label>
               <input matInput formControlName="name" placeholder="Ex: REPORT_READ" required />
-              @if (
-                createForm.get('name')?.hasError('required') && createForm.get('name')?.touched
-              ) {
+              @if (createForm.get('name')?.hasError('required') && createForm.get('name')?.touched) {
                 <mat-error>Campo obrigatório</mat-error>
               }
             </mat-form-field>
-            <button
-              mat-flat-button
-              type="submit"
-              [disabled]="paged.loading() || submitting() || createForm.invalid"
-            >
+            <button mat-flat-button type="submit" [disabled]="loading() || submitting() || createForm.invalid">
               @if (submitting()) {
                 <mat-spinner diameter="18" />
               } @else {
@@ -66,17 +57,20 @@ import { PagedState } from '../../../core/admin/paged-state';
         }
       </div>
 
-      <!-- Busca -->
+      <!-- Busca client-side -->
       <mat-form-field appearance="outline" class="w-full !pb-0">
         <mat-label>Buscar permissão</mat-label>
         <mat-icon matPrefix class="!text-[var(--text-secondary)]">search</mat-icon>
         <input matInput [formControl]="searchControl" placeholder="Ex: USER_READ" />
+        @if (searchTerm()) {
+          <button mat-icon-button matSuffix type="button" (click)="searchControl.reset()" aria-label="Limpar busca">
+            <mat-icon class="!text-[18px]">close</mat-icon>
+          </button>
+        }
       </mat-form-field>
 
-      <div
-        class="bg-[var(--surface-color)] border border-[var(--border-color)] rounded-xl overflow-hidden"
-      >
-        @if (paged.loading()) {
+      <div class="bg-[var(--surface-color)] border border-[var(--border-color)] rounded-xl overflow-hidden">
+        @if (loading()) {
           <div class="divide-y divide-[var(--border-color)]">
             @for (i of skeletonRows; track i) {
               <div class="flex items-center gap-4 px-6 py-4">
@@ -85,75 +79,55 @@ import { PagedState } from '../../../core/admin/paged-state';
               </div>
             }
           </div>
-        } @else if (paged.rows().length === 0) {
-          <app-empty-state message="Nenhuma permissão cadastrada." icon="key" />
+        } @else if (filtered().length === 0) {
+          <app-empty-state [message]="emptyMessage()" icon="key" />
         } @else {
-          <div class="overflow-x-auto">
-            <table mat-table [dataSource]="paged.rows()" class="w-full" aria-label="Tabela de permissões">
-              <ng-container matColumnDef="name">
-                <th
-                  mat-header-cell
-                  *matHeaderCellDef
-                  class="!text-[var(--text-secondary)] !text-xs !pl-6"
-                >
-                  Nome
-                </th>
-                <td
-                  mat-cell
-                  *matCellDef="let p"
-                  class="!text-[var(--text-primary)] !text-sm !font-mono !pl-6"
-                >
-                  {{ p.name }}
-                </td>
-              </ng-container>
-              <ng-container matColumnDef="actions">
-                <th mat-header-cell *matHeaderCellDef class="!text-right !pr-4"></th>
-                <td mat-cell *matCellDef="let p" class="!text-right !pr-2">
-                  @if (canDelete()) {
-                    <button
-                      mat-icon-button
-                      (click)="delete(p)"
-                      [attr.aria-label]="'Excluir ' + p.name"
-                      matTooltip="Excluir"
-                      class="!text-[var(--text-muted)] hover:!text-red-400"
-                    >
-                      <mat-icon>delete</mat-icon>
-                    </button>
-                  }
-                </td>
-              </ng-container>
-              <tr mat-header-row *matHeaderRowDef="cols"></tr>
-              <tr
-                mat-row
-                *matRowDef="let row; columns: cols"
-                class="hover:bg-[var(--surface-hover)] transition-colors"
-              ></tr>
-            </table>
-          </div>
-          <mat-paginator
-            [length]="paged.total()"
-            [pageSize]="paged.size()"
-            [pageSizeOptions]="[10, 25, 50]"
-            (page)="onPage($event)"
-            class="border-t border-[var(--border-color)]"
-          />
+          <table mat-table [dataSource]="filtered()" class="w-full" aria-label="Tabela de permissões">
+            <ng-container matColumnDef="name">
+              <th mat-header-cell *matHeaderCellDef class="!text-[var(--text-secondary)] !text-xs !pl-6">
+                Nome
+                <span class="ml-2 text-[var(--text-muted)] font-normal">({{ filtered().length }})</span>
+              </th>
+              <td mat-cell *matCellDef="let p" class="!text-[var(--text-primary)] !text-sm !font-mono !pl-6">
+                {{ p.name }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef class="!text-right !pr-4"></th>
+              <td mat-cell *matCellDef="let p" class="!text-right !pr-2">
+                @if (canDelete()) {
+                  <button
+                    mat-icon-button
+                    (click)="delete(p)"
+                    [attr.aria-label]="'Excluir ' + p.name"
+                    matTooltip="Excluir"
+                    class="!text-[var(--text-muted)] hover:!text-red-400"
+                  >
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                }
+              </td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="cols"></tr>
+            <tr mat-row *matRowDef="let row; columns: cols" class="hover:bg-[var(--surface-hover)] transition-colors"></tr>
+          </table>
         }
       </div>
     </div>
   `,
 })
-export class PermissionsComponent implements OnInit {
+export class PermissionsComponent {
   private readonly permissionsService = inject(PermissionsAdminService);
   private readonly store = inject(AuthStore);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
   private readonly fb = inject(FormBuilder);
-  private readonly destroyRef = inject(DestroyRef);
 
   readonly cols = ['name', 'actions'];
-  readonly paged = new PagedState<Permission>();
-  readonly submitting = signal(false);
   readonly skeletonRows = Array(6).fill(0);
+  readonly loading = signal(true);
+  readonly submitting = signal(false);
+  readonly allPermissions = signal<Permission[]>([]);
 
   readonly canCreate = computed(() => this.store.hasPermission(PERMISSIONS.PERMISSION_CREATE));
   readonly canDelete = computed(() => this.store.hasPermission(PERMISSIONS.PERMISSION_DELETE));
@@ -161,29 +135,35 @@ export class PermissionsComponent implements OnInit {
   readonly createForm = this.fb.nonNullable.group({ name: ['', Validators.required] });
   readonly searchControl = this.fb.control('');
 
-  ngOnInit(): void {
-    this.load();
-    this.searchControl.valueChanges
-      .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => { this.paged.page.set(0); this.load(); });
+  readonly searchTerm = toSignal(this.searchControl.valueChanges, { initialValue: '' });
+
+  readonly filtered = computed(() => {
+    const term = (this.searchTerm() ?? '').trim().toLowerCase();
+    const all = this.allPermissions();
+    return term ? all.filter((p) => p.name.toLowerCase().includes(term)) : all;
+  });
+
+  readonly emptyMessage = computed(() => {
+    const term = (this.searchTerm() ?? '').trim();
+    return term
+      ? `Nenhuma permissão encontrada para "${term}".`
+      : 'Nenhuma permissão cadastrada.';
+  });
+
+  constructor() {
+    void this.load();
   }
 
   private async load(): Promise<void> {
-    this.paged.loading.set(true);
-    const search = this.searchControl.value?.trim() || undefined;
+    this.loading.set(true);
     try {
-      const res = await this.permissionsService.list(this.paged.page(), this.paged.size(), search);
-      this.paged.apply(res);
+      const all = await this.permissionsService.listAll();
+      this.allPermissions.set(all);
     } catch {
       this.snackBar.open('Erro ao carregar permissões.', 'OK', { duration: 3000 });
     } finally {
-      this.paged.loading.set(false);
+      this.loading.set(false);
     }
-  }
-
-  onPage(e: import('@angular/material/paginator').PageEvent): void {
-    this.paged.onPage(e);
-    this.load();
   }
 
   async create(): Promise<void> {
@@ -198,7 +178,6 @@ export class PermissionsComponent implements OnInit {
     );
     if (ok) {
       this.createForm.reset();
-      this.paged.page.set(0);
       await this.load();
     }
     this.submitting.set(false);

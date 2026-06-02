@@ -126,13 +126,6 @@ describe('AuditLogsComponent', () => {
     );
   });
 
-  // ── fmt ───────────────────────────────────────────────────────────────────
-
-  it('fmt formata timestamp ISO para pt-BR', () => {
-    const result = component.fmt('2026-01-15T14:30:00Z');
-    expect(result).toMatch(/15\/01\/2026/);
-  });
-
   // ── badgeClass ────────────────────────────────────────────────────────────
 
   it('badgeClass retorna classe colorida para ação conhecida', () => {

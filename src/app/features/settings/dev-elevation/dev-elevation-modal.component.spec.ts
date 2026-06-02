@@ -56,7 +56,7 @@ describe('DevElevationModalComponent', () => {
     });
 
     it('avança para step2 após firstCode bem-sucedido', async () => {
-      devService.firstCode.mockResolvedValue({ devToken: 'tok-abc', expiresInSeconds: 90 });
+      devService.firstCode.mockResolvedValue({ devToken: 'tok-abc', expiresIn: 90 });
       component.code1.set('123456');
       await component.submitStep1();
       expect(component.step()).toBe('step2');
@@ -75,7 +75,7 @@ describe('DevElevationModalComponent', () => {
 
   describe('submitStep2', () => {
     beforeEach(async () => {
-      devService.firstCode.mockResolvedValue({ devToken: 'tok-abc', expiresInSeconds: 90 });
+      devService.firstCode.mockResolvedValue({ devToken: 'tok-abc', expiresIn: 90 });
       component.code1.set('123456');
       await component.submitStep1();
     });
@@ -89,7 +89,7 @@ describe('DevElevationModalComponent', () => {
     it('chama store.setDevToken e emite elevated após sucesso', async () => {
       const elevatedSpy = jest.fn();
       component.elevated.subscribe(elevatedSpy);
-      devService.complete.mockResolvedValue({ devAccessToken: 'dev-tok', expiresIn: 3600 });
+      devService.complete.mockResolvedValue({ accessToken: 'dev-tok', expiresIn: 3600 });
 
       component.code2.set('654321');
       await component.submitStep2();
@@ -110,7 +110,7 @@ describe('DevElevationModalComponent', () => {
 
   describe('reset', () => {
     it('volta ao estado inicial', async () => {
-      devService.firstCode.mockResolvedValue({ devToken: 'tok', expiresInSeconds: 90 });
+      devService.firstCode.mockResolvedValue({ devToken: 'tok', expiresIn: 90 });
       component.code1.set('123456');
       await component.submitStep1();
       expect(component.step()).toBe('step2');
@@ -126,14 +126,14 @@ describe('DevElevationModalComponent', () => {
 
   describe('step2Expired', () => {
     it('é false quando timer > 0', async () => {
-      devService.firstCode.mockResolvedValue({ devToken: 'tok', expiresInSeconds: 90 });
+      devService.firstCode.mockResolvedValue({ devToken: 'tok', expiresIn: 90 });
       component.code1.set('123456');
       await component.submitStep1();
       expect(component.step2Expired()).toBe(false);
     });
 
     it('é true quando step2SecondsLeft chega a 0', async () => {
-      devService.firstCode.mockResolvedValue({ devToken: 'tok', expiresInSeconds: 90 });
+      devService.firstCode.mockResolvedValue({ devToken: 'tok', expiresIn: 90 });
       component.code1.set('123456');
       await component.submitStep1();
       component.step2SecondsLeft.set(0);

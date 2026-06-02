@@ -1,10 +1,11 @@
 import { Routes } from '@angular/router';
-import { authGuard } from './core/rbac/permission.guard';
+import { authGuard, alreadyAuthGuard } from './core/rbac/permission.guard';
 
 export const routes: Routes = [
   {
     path: '',
     pathMatch: 'full',
+    canActivate: [alreadyAuthGuard],
     loadComponent: () =>
       import('./features/landing/landing.component').then((m) => m.LandingComponent),
   },
@@ -28,6 +29,12 @@ export const routes: Routes = [
         path: 'settings',
         loadChildren: () =>
           import('./features/settings/settings.routes').then((m) => m.settingsRoutes),
+      },
+      {
+        path: 'template',
+        data: { title: 'Template' },
+        loadComponent: () =>
+          import('./features/template/template.component').then((m) => m.TemplateComponent),
       },
       {
         path: 'access-denied',

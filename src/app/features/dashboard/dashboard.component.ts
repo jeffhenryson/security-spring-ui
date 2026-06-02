@@ -8,12 +8,13 @@ import { AuthStore } from '../../core/auth/auth.store';
 import { PERMISSIONS } from '../../core/rbac/permissions.constants';
 import { StatsService, StatsResponse } from '../../core/admin/stats.service';
 import { AuditLogsService, AuditLogResponse } from '../../core/admin/audit-logs.service';
+import { DateFormatPipe } from '../../shared/date-format.pipe';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, MatIconModule, MatTooltipModule, MatButtonModule],
+  imports: [RouterLink, MatIconModule, MatTooltipModule, MatButtonModule, DateFormatPipe],
   template: `
     <div class="p-6 max-w-5xl mx-auto">
       <!-- Saudação -->
@@ -213,7 +214,7 @@ import { AuditLogsService, AuditLogResponse } from '../../core/admin/audit-logs.
                       {{ log.action }}
                     </span>
                     <span class="text-[var(--text-secondary)] text-sm truncate flex-1">{{ log.who }}</span>
-                    <span class="text-[var(--text-muted)] text-xs whitespace-nowrap">{{ fmtRelative(log.timestamp) }}</span>
+                    <span class="text-[var(--text-muted)] text-xs whitespace-nowrap">{{ log.timestamp | dateFormat:'rel' }}</span>
                   </div>
                 }
               </div>
@@ -231,7 +232,11 @@ export class DashboardComponent implements OnInit {
   private readonly snackBar = inject(MatSnackBar);
 
   readonly username = computed(() => this.store.currentUser()?.username ?? '');
-  readonly emailUnverified = computed(() => !this.store.isEmailVerified());
+  // Só mostra o banner se o usuário TEM email cadastrado e ele ainda não foi verificado.
+  // Usuários criados sem email (ex.: criados por admin) não devem ver este aviso.
+  readonly emailUnverified = computed(() =>
+    !!this.store.currentUser()?.email && !this.store.isEmailVerified(),
+  );
   readonly hasPendingEmail = computed(() => this.store.hasPendingEmail());
   readonly pendingEmail = computed(() => this.store.currentUser()?.pendingEmail ?? '');
   readonly totalPermissions = computed(() => this.store.permissions().length);
@@ -298,13 +303,4 @@ export class DashboardComponent implements OnInit {
     return 'bg-[var(--surface-hover)] text-[var(--text-primary)]';
   }
 
-  fmtRelative(iso: string): string {
-    const diff = Date.now() - new Date(iso).getTime();
-    const m = Math.floor(diff / 60000);
-    if (m < 1) return 'agora';
-    if (m < 60) return `${m}min atrás`;
-    const h = Math.floor(m / 60);
-    if (h < 24) return `${h}h atrás`;
-    return `${Math.floor(h / 24)}d atrás`;
-  }
 }

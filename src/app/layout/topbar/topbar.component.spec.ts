@@ -43,21 +43,21 @@ function buildTestBed(initialTheme: Theme) {
 describe('TopbarComponent', () => {
   beforeEach(() => TestBed.resetTestingModule());
 
-  // ── themeIcon ─────────────────────────────────────────────────────────────
+  // ── themeIconUri ──────────────────────────────────────────────────────────
 
-  it('themeIcon = dark_mode quando tema é dark', () => {
+  it('themeIconUri retorna URI SVG para dark', () => {
     const { component } = buildTestBed('dark');
-    expect(component.themeIcon()).toBe('dark_mode');
+    expect(component.themeIconUri()).toMatch(/^url\("data:image\/svg\+xml,/);
   });
 
-  it('themeIcon = light_mode quando tema é light', () => {
+  it('themeIconUri retorna URI SVG para light', () => {
     const { component } = buildTestBed('light');
-    expect(component.themeIcon()).toBe('light_mode');
+    expect(component.themeIconUri()).toMatch(/^url\("data:image\/svg\+xml,/);
   });
 
-  it('themeIcon = settings_brightness quando tema é system', () => {
+  it('themeIconUri retorna URI SVG para system', () => {
     const { component } = buildTestBed('system');
-    expect(component.themeIcon()).toBe('settings_brightness');
+    expect(component.themeIconUri()).toMatch(/^url\("data:image\/svg\+xml,/);
   });
 
   // ── themeTooltip ──────────────────────────────────────────────────────────

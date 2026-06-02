@@ -5,4 +5,5 @@ export interface ChangePasswordRequest {
   currentPassword: string;
   newPassword: string;
   totpCode?: string;
+  revokeOtherSessions?: boolean;
 }

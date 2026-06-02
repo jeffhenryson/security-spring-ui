@@ -14,6 +14,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { AuditLogsService, AuditLogResponse, AuditLogFilters } from '../../../core/admin/audit-logs.service';
 import { EmptyStateComponent } from '../../../shared/empty-state/empty-state.component';
 import { PagedState } from '../../../core/admin/paged-state';
+import { DateFormatPipe } from '../../../shared/date-format.pipe';
 
 // Eventos com badge de alerta vermelho — indicam incidentes de segurança
 const CRITICAL_EVENTS = new Set([
@@ -56,6 +57,8 @@ const ACTION_COLORS: Record<string, string> = {
   PASSWORD_RESET_COMPLETED: 'bg-green-950 text-green-300',
   EMAIL_CHANGE_REQUESTED: 'bg-yellow-950 text-yellow-300',
   EMAIL_CHANGE_CONFIRMED: 'bg-green-950 text-green-300',
+  OAUTH_GOOGLE_LOGIN: 'bg-blue-950 text-blue-300',
+  ACCESS_DENIED: 'bg-orange-950 text-orange-300',
 };
 
 const ALL_ACTIONS = Object.keys(ACTION_COLORS).sort();
@@ -75,6 +78,7 @@ const ALL_ACTIONS = Object.keys(ACTION_COLORS).sort();
     MatButtonModule,
     MatTooltipModule,
     EmptyStateComponent,
+    DateFormatPipe,
   ],
   template: `
     <div class="p-6 max-w-5xl mx-auto flex flex-col gap-6">
@@ -136,7 +140,7 @@ const ALL_ACTIONS = Object.keys(ACTION_COLORS).sort();
               <ng-container matColumnDef="timestamp">
                 <th mat-header-cell *matHeaderCellDef class="!text-[var(--text-secondary)] !text-xs !pl-6">Data/hora</th>
                 <td mat-cell *matCellDef="let l" class="!text-[var(--text-secondary)] !text-xs !pl-6 whitespace-nowrap">
-                  {{ fmt(l.timestamp) }}
+                  {{ l.timestamp | dateFormat }}
                 </td>
               </ng-container>
 
@@ -273,10 +277,4 @@ export class DevLogsComponent implements OnInit {
     URL.revokeObjectURL(url);
   }
 
-  fmt(iso: string): string {
-    return new Date(iso).toLocaleString('pt-BR', {
-      day: '2-digit', month: '2-digit', year: 'numeric',
-      hour: '2-digit', minute: '2-digit', second: '2-digit',
-    });
-  }
 }

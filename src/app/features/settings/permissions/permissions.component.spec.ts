@@ -4,13 +4,9 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { PermissionsComponent } from './permissions.component';
 import { PermissionsAdminService, PermissionResponse as Permission } from '../../../core/admin/permissions-admin.service';
-import { PagedResponse } from '../../../core/admin/paged-state';
 import { HttpErrorResponse } from '@angular/common/http';
 
 const MOCK_PERM: Permission = { name: 'USER_READ' };
-
-const EMPTY_PAGE: PagedResponse<Permission> = { content: [], totalElements: 0 };
-const ONE_PAGE: PagedResponse<Permission> = { content: [MOCK_PERM], totalElements: 1 };
 
 function makeDialogRef(result: unknown) {
   return { afterClosed: () => of(result) } as unknown as MatDialogRef<unknown>;
@@ -24,10 +20,9 @@ describe('PermissionsComponent', () => {
 
   beforeEach(async () => {
     permissionsService = {
-      list: jest.fn().mockResolvedValue(ONE_PAGE),
+      listAll: jest.fn().mockResolvedValue([MOCK_PERM]),
       create: jest.fn().mockResolvedValue(MOCK_PERM),
       remove: jest.fn().mockResolvedValue(undefined),
-      listAll: jest.fn().mockResolvedValue([MOCK_PERM]),
     } as unknown as jest.Mocked<PermissionsAdminService>;
 
     snackBar = { open: jest.fn() };
@@ -52,30 +47,32 @@ describe('PermissionsComponent', () => {
 
   // ── init ──────────────────────────────────────────────────────────────────
 
-  it('carrega permissões no ngOnInit', () => {
-    expect(permissionsService.list).toHaveBeenCalledWith(0, 10, undefined);
-    expect(component.paged.rows()).toEqual([MOCK_PERM]);
-    expect(component.paged.loading()).toBe(false);
+  it('carrega permissões no ngOnInit via listAll', () => {
+    expect(permissionsService.listAll).toHaveBeenCalled();
+    expect(component.allPermissions()).toEqual([MOCK_PERM]);
+    expect(component.loading()).toBe(false);
   });
 
   it('exibe snackbar de erro se carregamento falhar', async () => {
-    permissionsService.list.mockRejectedValueOnce(new Error('network'));
+    permissionsService.listAll.mockRejectedValueOnce(new Error('network'));
     await (component as any).load();
     expect(snackBar.open).toHaveBeenCalledWith('Erro ao carregar permissões.', 'OK', {
       duration: 3000,
     });
   });
 
-  // ── paginação ─────────────────────────────────────────────────────────────
+  // ── busca local ───────────────────────────────────────────────────────────
 
-  it('onPage atualiza page/size e recarrega', async () => {
-    jest.clearAllMocks();
-    permissionsService.list.mockResolvedValue(ONE_PAGE);
-    component.onPage({ pageIndex: 1, pageSize: 25, length: 50 });
-    await Promise.resolve();
-    expect(component.paged.page()).toBe(1);
-    expect(component.paged.size()).toBe(25);
-    expect(permissionsService.list).toHaveBeenCalledWith(1, 25, undefined);
+  it('filtered retorna todas as permissões sem filtro', () => {
+    expect(component.filtered()).toEqual([MOCK_PERM]);
+  });
+
+  it('filtered filtra por nome (case-insensitive)', () => {
+    component.searchControl.setValue('user');
+    expect(component.filtered()).toEqual([MOCK_PERM]);
+
+    component.searchControl.setValue('NONEXISTENT');
+    expect(component.filtered()).toEqual([]);
   });
 
   // ── create ────────────────────────────────────────────────────────────────
@@ -90,11 +87,11 @@ describe('PermissionsComponent', () => {
     component.createForm.setValue({ name: 'REPORT_READ' });
     jest.clearAllMocks();
     permissionsService.create.mockResolvedValue({ name: 'REPORT_READ' });
-    permissionsService.list.mockResolvedValue(ONE_PAGE);
+    permissionsService.listAll.mockResolvedValue([MOCK_PERM, { name: 'REPORT_READ' }]);
 
     await component.create();
     expect(permissionsService.create).toHaveBeenCalledWith('REPORT_READ');
-    expect(permissionsService.list).toHaveBeenCalled();
+    expect(permissionsService.listAll).toHaveBeenCalled();
     expect(component.submitting()).toBe(false);
   });
 
@@ -122,11 +119,11 @@ describe('PermissionsComponent', () => {
   it('delete: chama permissionsService.remove e recarrega após confirmação', async () => {
     dialog.open.mockReturnValue(makeDialogRef(true));
     jest.clearAllMocks();
-    permissionsService.list.mockResolvedValue(EMPTY_PAGE);
+    permissionsService.listAll.mockResolvedValue([]);
     permissionsService.remove.mockResolvedValue(undefined);
 
     await component.delete(MOCK_PERM);
     expect(permissionsService.remove).toHaveBeenCalledWith(MOCK_PERM.name);
-    expect(permissionsService.list).toHaveBeenCalled();
+    expect(permissionsService.listAll).toHaveBeenCalled();
   });
 });

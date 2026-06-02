@@ -67,7 +67,7 @@ import { AuthStore } from '../../../core/auth/auth.store';
             }
 
             <div class="flex gap-3 mt-2">
-              <button mat-stroked-button class="flex-1" type="button" (click)="close.emit()">
+              <button mat-stroked-button class="flex-1" type="button" (click)="dismissed.emit()">
                 Cancelar
               </button>
               <button
@@ -158,7 +158,7 @@ import { AuthStore } from '../../../core/auth/auth.store';
   `,
 })
 export class DevElevationModalComponent {
-  @Output() close = new EventEmitter<void>();
+  @Output() dismissed = new EventEmitter<void>();
   @Output() elevated = new EventEmitter<void>();
 
   private readonly devService = inject(DevService);
@@ -177,7 +177,7 @@ export class DevElevationModalComponent {
   private step2Timer: ReturnType<typeof setInterval> | null = null;
 
   onBackdropClick(): void {
-    if (!this.loading()) this.close.emit();
+    if (!this.loading()) this.dismissed.emit();
   }
 
   async submitStep1(): Promise<void> {
@@ -187,7 +187,7 @@ export class DevElevationModalComponent {
     try {
       const res = await this.devService.firstCode(this.code1());
       this.devToken.set(res.devToken);
-      this.step2SecondsLeft.set(res.expiresInSeconds);
+      this.step2SecondsLeft.set(res.expiresIn);
       this.step.set('step2');
       this.startStep2Timer();
     } catch {
@@ -203,7 +203,7 @@ export class DevElevationModalComponent {
     this.error.set('');
     try {
       const res = await this.devService.complete(this.devToken(), this.code2());
-      this.store.setDevToken(res.devAccessToken, res.expiresIn);
+      this.store.setDevToken(res.accessToken, res.expiresIn);
       this.stopStep2Timer();
       this.elevated.emit();
     } catch {

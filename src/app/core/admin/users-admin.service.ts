@@ -10,6 +10,8 @@ export type { UserResponse };
 export interface UserListFilters {
   search?: string;
   enabled?: boolean;
+  sortBy?: 'id' | 'username' | 'email' | 'enabled' | 'createdAt';
+  sortDir?: 'asc' | 'desc';
 }
 
 @Injectable({ providedIn: 'root' })
@@ -21,6 +23,8 @@ export class UsersAdminService {
     const params: Record<string, string> = { page: String(page), size: String(size) };
     if (filters.search) params['search'] = filters.search;
     if (filters.enabled !== undefined) params['enabled'] = String(filters.enabled);
+    if (filters.sortBy) params['sortBy'] = filters.sortBy;
+    if (filters.sortDir) params['sortDir'] = filters.sortDir;
     return firstValueFrom(this.http.get<PagedResponse<UserResponse>>(`${this.config.rootUrl}/users`, { params }));
   }
 

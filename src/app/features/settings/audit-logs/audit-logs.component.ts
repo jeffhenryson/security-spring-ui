@@ -14,6 +14,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { AuditLogsService, AuditLogResponse, AuditLogFilters } from '../../../core/admin/audit-logs.service';
 import { EmptyStateComponent } from '../../../shared/empty-state/empty-state.component';
 import { PagedState } from '../../../core/admin/paged-state';
+import { DateFormatPipe } from '../../../shared/date-format.pipe';
 
 const ACTION_COLORS: Record<string, string> = {
   USER_LOGGED_IN: 'bg-blue-950 text-blue-300',
@@ -42,14 +43,23 @@ const ACTION_COLORS: Record<string, string> = {
   TOTP_ENABLED: 'bg-teal-950 text-teal-300',
   TOTP_DISABLED: 'bg-teal-950 text-teal-400',
   TOTP_BACKUP_CODES_REGENERATED: 'bg-teal-950 text-teal-300',
+  TOTP_REPLACED: 'bg-teal-950 text-teal-300',
   PASSWORD_RESET_REQUESTED: 'bg-yellow-950 text-yellow-300',
   PASSWORD_RESET_COMPLETED: 'bg-green-950 text-green-300',
   EMAIL_CHANGE_REQUESTED: 'bg-yellow-950 text-yellow-300',
   EMAIL_CHANGE_CONFIRMED: 'bg-green-950 text-green-300',
+  OAUTH_GOOGLE_LOGIN: 'bg-blue-950 text-blue-300',
+  ACCESS_DENIED: 'bg-orange-950 text-orange-300',
+  DEV_ELEVATION_COMPLETED: 'bg-amber-950 text-amber-300',
 };
 
 // Eventos exclusivos da view DEV — não aparecem no filtro do ADMIN
-const DEV_ONLY_EVENTS = new Set(['LOGIN_FAILED', 'ACCOUNT_LOCKED', 'TOKEN_THEFT_DETECTED']);
+const DEV_ONLY_EVENTS = new Set([
+  'LOGIN_FAILED',
+  'ACCOUNT_LOCKED',
+  'TOKEN_THEFT_DETECTED',
+  'DEV_ELEVATION_COMPLETED',
+]);
 
 const KNOWN_ACTIONS = Object.keys(ACTION_COLORS)
   .filter((a) => !DEV_ONLY_EVENTS.has(a))
@@ -70,6 +80,7 @@ const KNOWN_ACTIONS = Object.keys(ACTION_COLORS)
     MatButtonModule,
     MatTooltipModule,
     EmptyStateComponent,
+    DateFormatPipe,
   ],
   template: `
     <div class="p-6 max-w-5xl mx-auto flex flex-col gap-6">
@@ -130,7 +141,7 @@ const KNOWN_ACTIONS = Object.keys(ACTION_COLORS)
                   Data/hora
                 </th>
                 <td mat-cell *matCellDef="let l" class="!text-[var(--text-secondary)] !text-xs !pl-6 whitespace-nowrap">
-                  {{ fmt(l.timestamp) }}
+                  {{ l.timestamp | dateFormat }}
                 </td>
               </ng-container>
 
@@ -230,6 +241,8 @@ export class AuditLogsComponent implements OnInit {
     };
     try {
       const res = await this.auditLogsService.list(this.paged.page(), this.paged.size(), filters);
+      // Remove eventos exclusivos da área DEV — ADMIN não deve visualizá-los.
+      res.content = res.content.filter((l) => !DEV_ONLY_EVENTS.has(l.action));
       this.paged.apply(res);
     } catch {
       this.snackBar.open('Erro ao carregar logs de auditoria.', 'OK', { duration: 3000 });
@@ -264,14 +277,4 @@ export class AuditLogsComponent implements OnInit {
     URL.revokeObjectURL(url);
   }
 
-  fmt(iso: string): string {
-    return new Date(iso).toLocaleString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    });
-  }
 }

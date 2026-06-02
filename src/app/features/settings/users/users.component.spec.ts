@@ -72,7 +72,7 @@ describe('UsersComponent', () => {
   // ── init ──────────────────────────────────────────────────────────────────
 
   it('carrega usuários no ngOnInit', () => {
-    expect(usersService.list).toHaveBeenCalledWith(0, 10, {});
+    expect(usersService.list).toHaveBeenCalledWith(0, 10, { sortBy: 'id', sortDir: 'asc' });
     expect(component.paged.rows()).toEqual([MOCK_USER]);
     expect(component.paged.total()).toBe(1);
     expect(component.paged.loading()).toBe(false);
@@ -126,7 +126,7 @@ describe('UsersComponent', () => {
     await Promise.resolve();
     expect(component.paged.page()).toBe(2);
     expect(component.paged.size()).toBe(20);
-    expect(usersService.list).toHaveBeenCalledWith(2, 20, {});
+    expect(usersService.list).toHaveBeenCalledWith(2, 20, { sortBy: 'id', sortDir: 'asc' });
   });
 
   // ── openCreate ────────────────────────────────────────────────────────────

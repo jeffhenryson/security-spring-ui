@@ -1,11 +1,14 @@
+import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
 import { permissionGuard } from '../../core/rbac/permission.guard';
 import { devElevationGuard } from '../../core/rbac/dev-elevation.guard';
 import { PERMISSIONS } from '../../core/rbac/permissions.constants';
+import { AuthService } from '../../core/auth/auth.service';
 
 export const settingsRoutes: Routes = [
   {
     path: '',
+    resolve: { user: () => inject(AuthService).ensureLoaded() },
     loadComponent: () =>
       import('./settings-shell/settings-shell.component').then((m) => m.SettingsShellComponent),
     children: [
@@ -56,15 +59,15 @@ export const settingsRoutes: Routes = [
       // Rotas exclusivas da área DEV — exigem elevação ativa (devElevationGuard)
       {
         path: 'dev-logs',
-        canMatch: [permissionGuard(PERMISSIONS.DEV_LOGS_TECHNICAL), devElevationGuard],
-        data: { title: 'Logs técnicos', preloadPermission: PERMISSIONS.DEV_LOGS_TECHNICAL },
+        canMatch: [permissionGuard(PERMISSIONS.AUDIT_READ), devElevationGuard],
+        data: { title: 'Logs técnicos', preloadPermission: PERMISSIONS.AUDIT_READ },
         loadComponent: () =>
           import('./dev-logs/dev-logs.component').then((m) => m.DevLogsComponent),
       },
       {
         path: 'dev-system',
-        canMatch: [permissionGuard(PERMISSIONS.DEV_SYSTEM_CONFIG), devElevationGuard],
-        data: { title: 'Sistema', preloadPermission: PERMISSIONS.DEV_SYSTEM_CONFIG },
+        canMatch: [devElevationGuard],
+        data: { title: 'Sistema' },
         loadComponent: () =>
           import('./dev-system/dev-system.component').then((m) => m.DevSystemComponent),
       },

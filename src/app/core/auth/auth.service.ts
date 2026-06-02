@@ -116,10 +116,22 @@ export class AuthService {
   async loadCurrentUser(): Promise<void> {
     const [user, totp] = await Promise.all([
       firstValueFrom(this.http.get<CurrentUser>(`${this.api}/users/me`)),
-      firstValueFrom(this.http.get<{ enabled: boolean }>(`${this.api}/auth/2fa/status`))
-        .catch(() => ({ enabled: false })),
+      firstValueFrom(this.http.get<{ enabled: boolean; backupCodesRemaining: number }>(`${this.api}/auth/2fa/status`))
+        .catch(() => ({ enabled: false, backupCodesRemaining: 0 })),
     ]);
-    this.store.setCurrentUser({ ...user, totpEnabled: totp.enabled });
+    this.store.setCurrentUser({
+      ...user,
+      totpEnabled: totp.enabled,
+      backupCodesRemaining: totp.backupCodesRemaining,
+    });
+  }
+
+  /** Garante que o usuário esteja carregado no store antes de continuar. Usado como route resolver. */
+  async ensureLoaded(): Promise<CurrentUser> {
+    const current = this.store.currentUser();
+    if (current) return current;
+    await this.loadCurrentUser();
+    return this.store.currentUser()!;
   }
 
   async register(username: string, email: string, password: string): Promise<void> {

@@ -20,6 +20,7 @@ import type { UserResponse } from '../../../api/models/user-response';
 /** User currently logged in — extends UserResponse with fields not in the generated model */
 export interface CurrentUser extends UserResponse {
   totpEnabled?: boolean;
+  backupCodesRemaining?: number;
   avatarUrl?: string | null;
 }
 

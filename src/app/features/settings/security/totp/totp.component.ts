@@ -54,6 +54,10 @@ type TotpView = 'idle' | 'setup-qr' | 'backup-codes' | 'disable-form' | 'regen-f
                 <mat-icon class="!text-[14px] !w-3.5 !h-3.5">check_circle</mat-icon>
                 2FA ativado
               </span>
+              <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-slate-800 text-slate-400">
+                <mat-icon class="!text-[14px] !w-3.5 !h-3.5">key</mat-icon>
+                {{ backupCodesRemaining() }} de 8 backup codes restantes
+              </span>
             } @else if (totpEnabled() === false) {
               <span
                 class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium
@@ -355,6 +359,7 @@ export class TotpComponent {
   }
 
   readonly totpEnabled = computed(() => this.store.currentUser()?.totpEnabled);
+  readonly backupCodesRemaining = computed(() => this.store.currentUser()?.backupCodesRemaining ?? 0);
 
   readonly view = signal<TotpView>('idle');
   readonly loading = signal(false);
@@ -430,7 +435,7 @@ export class TotpComponent {
       this.snackBar.open('2FA habilitado com sucesso!', 'OK', { duration: 3000 });
       // Atualiza o store diretamente — não depende de um re-fetch que pode falhar.
       const u = this.store.currentUser();
-      if (u) this.store.setCurrentUser({ ...u, totpEnabled: true });
+      if (u) this.store.setCurrentUser({ ...u, totpEnabled: true, backupCodesRemaining: res.backupCodes.length });
     } catch {
       this.error.set('Código inválido ou expirado. Tente novamente.');
     } finally {
@@ -448,7 +453,7 @@ export class TotpComponent {
       this.view.set('idle');
       this.snackBar.open('2FA desabilitado.', 'OK', { duration: 3000 });
       const u = this.store.currentUser();
-      if (u) this.store.setCurrentUser({ ...u, totpEnabled: false });
+      if (u) this.store.setCurrentUser({ ...u, totpEnabled: false, backupCodesRemaining: 0 });
     } catch (err) {
       if (err instanceof HttpErrorResponse && (err.status === 401 || err.status === 403)) {
         this.error.set('Senha ou código inválido.');
@@ -498,6 +503,8 @@ export class TotpComponent {
       this.backupCodes.set(res.backupCodes);
       this.view.set('backup-codes');
       this.snackBar.open('Novos backup codes gerados!', 'OK', { duration: 3000 });
+      const u = this.store.currentUser();
+      if (u) this.store.setCurrentUser({ ...u, backupCodesRemaining: res.backupCodes.length });
     } catch (err) {
       if (err instanceof HttpErrorResponse && (err.status === 401 || err.status === 403)) {
         this.error.set('Senha incorreta.');

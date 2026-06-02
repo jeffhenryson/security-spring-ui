@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   MAT_DIALOG_DATA,
@@ -9,10 +9,14 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { passwordPolicyValidator } from '../../../../core/validators/password.validators';
+import { PasswordStrengthComponent } from '../../../../shared/password-strength/password-strength.component';
 
 @Component({
   selector: 'app-create-user-dialog',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ReactiveFormsModule,
     MatDialogModule,
@@ -20,6 +24,8 @@ import { MatButtonModule } from '@angular/material/button';
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
+    MatIconModule,
+    PasswordStrengthComponent,
   ],
   template: `
     <h2 mat-dialog-title>Novo usuário</h2>
@@ -37,6 +43,7 @@ import { MatButtonModule } from '@angular/material/button';
             <mat-error>Campo obrigatório</mat-error>
           }
         </mat-form-field>
+
         <mat-form-field appearance="outline">
           <mat-label>Email (opcional)</mat-label>
           <input matInput type="email" formControlName="email" autocomplete="off" />
@@ -44,13 +51,32 @@ import { MatButtonModule } from '@angular/material/button';
             <mat-error>Email inválido</mat-error>
           }
         </mat-form-field>
+
         <mat-form-field appearance="outline">
           <mat-label>Senha</mat-label>
-          <input matInput type="password" formControlName="password" autocomplete="new-password" />
-          @if (form.get('password')?.hasError('minlength') && form.get('password')?.touched) {
-            <mat-error>Mínimo 8 caracteres</mat-error>
+          <input
+            matInput
+            [type]="showPassword ? 'text' : 'password'"
+            formControlName="password"
+            autocomplete="new-password"
+          />
+          <button mat-icon-button matSuffix type="button"
+                  (mousedown)="showPassword = true"
+                  (mouseup)="showPassword = false"
+                  (mouseleave)="showPassword = false"
+                  aria-label="Mostrar senha">
+            <mat-icon class="!text-[18px]">{{ showPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+          @if (
+            (form.get('password')?.hasError('minlength') || form.get('password')?.hasError('passwordPolicy')) &&
+            form.get('password')?.touched
+          ) {
+            <mat-error>Mín. 8 chars com maiúscula, dígito e caractere especial</mat-error>
           }
         </mat-form-field>
+
+        <app-password-strength [password]="form.get('password')?.value ?? null" />
+
         <mat-form-field appearance="outline">
           <mat-label>Roles (opcional)</mat-label>
           <mat-select formControlName="roles" multiple>
@@ -74,10 +100,12 @@ export class CreateUserDialogComponent {
   readonly data: { availableRoles: string[] } = inject(MAT_DIALOG_DATA);
   private readonly fb = inject(FormBuilder);
 
+  showPassword = false;
+
   readonly form = this.fb.nonNullable.group({
     username: ['', Validators.required],
     email: ['', Validators.email],
-    password: ['', [Validators.required, Validators.minLength(8)]],
+    password: ['', [Validators.required, passwordPolicyValidator]],
     roles: [[] as string[]],
   });
 

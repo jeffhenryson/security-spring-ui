@@ -32,20 +32,26 @@ import { AuthService } from '../../../core/auth/auth.service';
         } @else {
           <div class="mb-8 text-center">
             <h1 class="text-2xl font-bold text-[var(--active-color)] mb-1">Verificação em 2 etapas</h1>
-            <p class="text-[var(--text-secondary)] text-sm">Digite o código do seu aplicativo autenticador</p>
+            <p class="text-[var(--text-secondary)] text-sm">
+              @if (useBackupCode()) {
+                Digite um dos seus códigos de backup
+              } @else {
+                Digite o código do seu aplicativo autenticador
+              }
+            </p>
           </div>
 
           <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
             <mat-form-field appearance="outline">
-              <mat-label>Código TOTP</mat-label>
+              <mat-label>{{ useBackupCode() ? 'Código de backup' : 'Código TOTP' }}</mat-label>
               <input
                 matInput
                 formControlName="code"
-                maxlength="6"
+                [attr.maxlength]="useBackupCode() ? null : 6"
                 autocomplete="one-time-code"
                 required
-                inputmode="numeric"
-                pattern="[0-9]*"
+                [attr.inputmode]="useBackupCode() ? 'text' : 'numeric'"
+                [attr.pattern]="useBackupCode() ? null : '[0-9]*'"
                 (input)="onCodeInput($event)"
               />
               @if (loading()) {
@@ -71,7 +77,14 @@ import { AuthService } from '../../../core/auth/auth.service';
             </button>
           </form>
 
-          <div class="mt-6 text-center text-sm">
+          <div class="mt-6 flex flex-col items-center gap-2 text-sm">
+            <button
+              type="button"
+              class="text-[var(--text-secondary)] hover:text-[var(--active-color)] underline bg-transparent border-none cursor-pointer"
+              (click)="toggleBackupCode()"
+            >
+              {{ useBackupCode() ? 'Usar código do autenticador' : 'Usar código de backup' }}
+            </button>
             <a routerLink="/auth/login" class="text-[var(--active-color)] hover:underline">Voltar ao login</a>
           </div>
         }
@@ -88,9 +101,10 @@ export class TwoFactorComponent implements OnInit {
   readonly loading = signal(false);
   readonly errorMsg = signal('');
   readonly sessionExpired = signal(false);
+  readonly useBackupCode = signal(false);
 
   readonly form = this.fb.nonNullable.group({
-    code: ['', [Validators.required, Validators.minLength(6), Validators.maxLength(6)]],
+    code: ['', [Validators.required, Validators.minLength(6)]],
   });
 
   ngOnInit(): void {
@@ -101,7 +115,14 @@ export class TwoFactorComponent implements OnInit {
     }
   }
 
+  toggleBackupCode(): void {
+    this.useBackupCode.update((v) => !v);
+    this.form.reset();
+    this.errorMsg.set('');
+  }
+
   onCodeInput(event: Event): void {
+    if (this.useBackupCode()) return;
     const input = event.target as HTMLInputElement;
     const digits = input.value.replace(/\D/g, '').slice(0, 6);
     if (digits !== input.value) {

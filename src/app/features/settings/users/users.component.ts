@@ -4,6 +4,7 @@ import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { firstValueFrom, debounceTime, distinctUntilChanged } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
 import { MatTableModule } from '@angular/material/table';
+import { MatSortModule, Sort } from '@angular/material/sort';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
@@ -32,6 +33,7 @@ import { ManageRolesDialogComponent } from './dialogs/manage-roles.dialog';
   imports: [
     ReactiveFormsModule,
     MatTableModule,
+    MatSortModule,
     MatPaginatorModule,
     MatButtonModule,
     MatIconModule,
@@ -103,11 +105,12 @@ import { ManageRolesDialogComponent } from './dialogs/manage-roles.dialog';
           <app-empty-state message="Nenhum usuário encontrado." icon="group" />
         } @else {
           <div class="overflow-x-auto">
-            <table mat-table [dataSource]="paged.rows()" class="w-full" aria-label="Tabela de usuários">
+            <table mat-table matSort [matSortActive]="sortBy()" [matSortDirection]="sortDir()" (matSortChange)="onSort($event)" [dataSource]="paged.rows()" class="w-full" aria-label="Tabela de usuários">
               <ng-container matColumnDef="username">
                 <th
                   mat-header-cell
                   *matHeaderCellDef
+                  mat-sort-header
                   class="!text-[var(--text-secondary)] !text-xs !pl-6"
                 >
                   Usuário
@@ -125,6 +128,7 @@ import { ManageRolesDialogComponent } from './dialogs/manage-roles.dialog';
                 <th
                   mat-header-cell
                   *matHeaderCellDef
+                  mat-sort-header
                   class="!text-[var(--text-secondary)] !text-xs"
                 >
                   Email
@@ -259,7 +263,9 @@ export class UsersComponent implements OnInit {
 
   readonly paged = new PagedState<User>();
   readonly allRoles = signal<string[]>([]);
-  readonly skeletonRows = Array(8).fill(0);
+  readonly sortBy = signal<'id' | 'username' | 'email' | 'enabled' | 'createdAt'>('id');
+  readonly sortDir = signal<'asc' | 'desc'>('asc');
+  readonly skeletonRows = Array(10).fill(0);
   readonly highlightedId = signal<number | null>(null);
   private highlightTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -315,6 +321,15 @@ export class UsersComponent implements OnInit {
     }
   }
 
+  onSort(sort: Sort): void {
+    const validCols = ['id', 'username', 'email', 'enabled', 'createdAt'] as const;
+    type SortCol = typeof validCols[number];
+    this.sortBy.set(validCols.includes(sort.active as SortCol) ? (sort.active as SortCol) : 'id');
+    this.sortDir.set(sort.direction === 'desc' ? 'desc' : 'asc');
+    this.paged.page.set(0);
+    this.load();
+  }
+
   private async load(): Promise<void> {
     this.paged.loading.set(true);
     const search = this.searchControl.value?.trim() ?? '';
@@ -322,6 +337,8 @@ export class UsersComponent implements OnInit {
     const filters = {
       ...(search ? { search } : {}),
       ...(status ? { enabled: status === 'active' } : {}),
+      sortBy: this.sortBy(),
+      sortDir: this.sortDir(),
     };
     try {
       const res = await this.usersService.list(this.paged.page(), this.paged.size(), filters);

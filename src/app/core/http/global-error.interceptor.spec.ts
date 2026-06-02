@@ -66,14 +66,14 @@ describe('globalErrorInterceptor', () => {
     expect(Sentry.captureException).not.toHaveBeenCalled();
   });
 
-  it('não exibe snackbar para erros 4xx', async () => {
+  it('exibe snackbar "Recurso não encontrado." para 404', async () => {
     let caught: unknown;
     http.get('/api/test').subscribe({ error: (e) => (caught = e) });
 
     controller.expectOne('/api/test').flush({}, { status: 404, statusText: 'Not Found' });
     await Promise.resolve();
 
-    expect(snackBar.open).not.toHaveBeenCalled();
+    expect(snackBar.open).toHaveBeenCalledWith('Recurso não encontrado.', 'Fechar', { duration: 4000 });
     expect(caught).toBeDefined();
   });
 

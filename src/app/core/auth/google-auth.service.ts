@@ -5,8 +5,6 @@ import { ApiConfiguration } from '../../api/api-configuration';
 import type { TokenPairResponse } from '../../api/models/token-pair-response';
 import { environment } from '../../../environments/environment';
 
-declare const google: typeof import('@types/google.accounts/index');
-
 @Injectable({ providedIn: 'root' })
 export class GoogleAuthService {
   private readonly http = inject(HttpClient);
@@ -24,9 +22,10 @@ export class GoogleAuthService {
         return;
       }
 
+      // O tipo global `google` é declarado pelo @types/google.accounts (namespace global).
       google.accounts.id.initialize({
         client_id: environment.googleClientId,
-        callback: (response) => {
+        callback: (response: google.accounts.id.CredentialResponse) => {
           if (response.credential) {
             resolve(response.credential);
           } else {
@@ -38,7 +37,7 @@ export class GoogleAuthService {
         ux_mode: 'popup',
       });
 
-      google.accounts.id.prompt((notification) => {
+      google.accounts.id.prompt((notification: google.accounts.id.PromptMomentNotification) => {
         if (notification.isNotDisplayed()) {
           reject(new Error('popup_not_displayed'));
         } else if (notification.isDismissedMoment()) {

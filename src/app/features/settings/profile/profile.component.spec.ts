@@ -138,6 +138,8 @@ describe('ProfileComponent', () => {
       expect(profileService.changePassword).toHaveBeenCalledWith({
         currentPassword: 'old123',
         newPassword: 'New456!x',
+        totpCode: undefined,
+        revokeOtherSessions: false,
       });
       expect(snackBar.open).toHaveBeenCalledWith('Senha alterada com sucesso!', 'OK', {
         duration: 3000,

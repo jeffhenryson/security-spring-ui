@@ -12,6 +12,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
@@ -19,6 +20,7 @@ import { AuthStore } from '../../../../core/auth/auth.store';
 import { SecurityService } from '../../../../core/security/security.service';
 import { SessionInfo } from '../../../../core/auth/models/auth.models';
 import { ConfirmDialogComponent } from '../../../../shared/confirm-dialog/confirm-dialog.component';
+import { DateFormatPipe } from '../../../../shared/date-format.pipe';
 
 @Component({
   selector: 'app-sessions',
@@ -29,6 +31,8 @@ import { ConfirmDialogComponent } from '../../../../shared/confirm-dialog/confir
     MatButtonModule,
     MatProgressSpinnerModule,
     MatIconModule,
+    MatTooltipModule,
+    DateFormatPipe,
   ],
   template: `
     <section class="bg-[var(--surface-color)] border border-[var(--border-color)] rounded-xl p-6">
@@ -78,7 +82,7 @@ import { ConfirmDialogComponent } from '../../../../shared/confirm-dialog/confir
                 Criado em
               </th>
               <td mat-cell *matCellDef="let s" class="!text-[var(--text-primary)] !text-sm">
-                {{ fmt(s.createdAt) }}
+                {{ s.createdAt | dateFormat }}
               </td>
             </ng-container>
             <ng-container matColumnDef="expiresAt">
@@ -86,7 +90,7 @@ import { ConfirmDialogComponent } from '../../../../shared/confirm-dialog/confir
                 Expira em
               </th>
               <td mat-cell *matCellDef="let s" class="!text-[var(--text-primary)] !text-sm">
-                {{ fmt(s.expiresAt) }}
+                {{ s.expiresAt | dateFormat }}
               </td>
             </ng-container>
             <ng-container matColumnDef="ipAddress">
@@ -101,8 +105,9 @@ import { ConfirmDialogComponent } from '../../../../shared/confirm-dialog/confir
               <th mat-header-cell *matHeaderCellDef class="!text-[var(--text-secondary)] !text-xs">
                 Dispositivo
               </th>
-              <td mat-cell *matCellDef="let s" class="!text-[var(--text-secondary)] !text-xs max-w-xs truncate">
-                {{ s.userAgent }}
+              <td mat-cell *matCellDef="let s" class="!text-[var(--text-secondary)] !text-xs max-w-xs"
+                  [matTooltip]="s.userAgent ?? ''" matTooltipShowDelay="600">
+                {{ parseAgent(s.userAgent) }}
               </td>
             </ng-container>
             <ng-container matColumnDef="actions">
@@ -204,13 +209,28 @@ export class SessionsComponent implements OnInit {
     }
   }
 
-  fmt(iso: string): string {
-    return new Date(iso).toLocaleString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+  parseAgent(ua: string | null): string {
+    if (!ua) return '—';
+
+    // Navegador
+    let browser = 'Navegador desconhecido';
+    if (/Edg\//.test(ua))          browser = 'Edge';
+    else if (/OPR\/|Opera/.test(ua)) browser = 'Opera';
+    else if (/Chrome\//.test(ua))  browser = 'Chrome';
+    else if (/Firefox\//.test(ua)) browser = 'Firefox';
+    else if (/Safari\//.test(ua) && !/Chrome/.test(ua)) browser = 'Safari';
+
+    // Sistema operacional
+    let os = '';
+    if (/Windows NT 10/.test(ua))      os = 'Windows 10/11';
+    else if (/Windows NT 6\.3/.test(ua)) os = 'Windows 8.1';
+    else if (/Windows/.test(ua))       os = 'Windows';
+    else if (/iPhone/.test(ua))        os = 'iPhone';
+    else if (/iPad/.test(ua))          os = 'iPad';
+    else if (/Android/.test(ua))       os = 'Android';
+    else if (/Mac OS X/.test(ua))      os = 'macOS';
+    else if (/Linux/.test(ua))         os = 'Linux';
+
+    return os ? `${browser} · ${os}` : browser;
   }
 }

@@ -1,10 +1,8 @@
 import {
   Component,
-  DestroyRef,
   inject,
   computed,
   signal,
-  effect,
   ChangeDetectionStrategy,
 } from '@angular/core';
 import {
@@ -15,8 +13,8 @@ import {
   NavigationEnd,
   ActivatedRoute,
 } from '@angular/router';
-import { NgTemplateOutlet } from '@angular/common';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { interval } from 'rxjs';
+import { toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter, map, startWith } from 'rxjs';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -51,8 +49,8 @@ const ADMIN_ITEMS: SettingsNavItem[] = [
 
 const DEV_ITEMS: SettingsNavItem[] = [
   { label: 'Permissões', icon: 'key', route: 'permissions', permission: PERMISSIONS.DEV_PERMISSION_MANAGE },
-  { label: 'Logs técnicos', icon: 'terminal', route: 'dev-logs', permission: PERMISSIONS.DEV_LOGS_TECHNICAL },
-  { label: 'Sistema', icon: 'settings_applications', route: 'dev-system', permission: PERMISSIONS.DEV_SYSTEM_CONFIG },
+  { label: 'Logs técnicos', icon: 'terminal', route: 'dev-logs', permission: PERMISSIONS.AUDIT_READ },
+  { label: 'Sistema', icon: 'settings_applications', route: 'dev-system' },
 ];
 
 @Component({
@@ -63,24 +61,20 @@ const DEV_ITEMS: SettingsNavItem[] = [
     RouterLink,
     RouterLinkActive,
     RouterOutlet,
-    NgTemplateOutlet,
     MatIconModule,
     MatButtonModule,
     MatTooltipModule,
     DevElevationModalComponent,
   ],
   template: `
-    <!-- SettingsShellComponent -->
-
-    <!-- DEV Elevation Modal -->
     @if (showElevationModal()) {
       <app-dev-elevation-modal
-        (close)="showElevationModal.set(false)"
+        (dismissed)="showElevationModal.set(false)"
         (elevated)="onElevated()"
       />
     }
 
-    <!-- Mobile: botão hambúrguer + menu colapsável -->
+    <!-- Mobile: hambúrguer -->
     <div class="sm:hidden w-full border-b settings-nav shrink-0">
       <button
         mat-icon-button
@@ -117,14 +111,34 @@ const DEV_ITEMS: SettingsNavItem[] = [
           }
           @if (isRoleDev()) {
             <div class="px-2 pt-1 pb-2">
-              <ng-container *ngTemplateOutlet="devButton" />
+              @if (!isDevElevated()) {
+                <button
+                  class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm
+                         text-amber-400 border border-amber-500/30 bg-amber-500/5
+                         hover:bg-amber-500/15 transition-colors cursor-pointer"
+                  (click)="showElevationModal.set(true)"
+                >
+                  <mat-icon class="!text-[18px] !w-[18px] !h-[18px]">lock</mat-icon>
+                  <span>Elevar para DEV</span>
+                </button>
+              } @else {
+                <div class="flex items-center gap-2 px-3 py-2 rounded-lg border
+                            border-green-500/30 bg-green-500/5">
+                  <mat-icon class="!text-[18px] !w-[18px] !h-[18px]" style="color:#4ade80">lock_open</mat-icon>
+                  <span class="text-xs flex-1" style="color:#4ade80">DEV — ⏱ {{ devMinutesLeft() }}min</span>
+                  <button mat-icon-button class="!w-6 !h-6 !min-w-0"
+                          (click)="revokeDevAccess()" matTooltip="Revogar acesso DEV">
+                    <mat-icon class="!text-[14px]" style="color:#f87171">logout</mat-icon>
+                  </button>
+                </div>
+              }
             </div>
           }
         </nav>
       </div>
     </div>
 
-    <!-- Desktop: sidebar fixa -->
+    <!-- Desktop: sidebar -->
     <aside class="hidden sm:flex sm:flex-col w-56 shrink-0 border-r settings-nav overflow-y-auto py-4">
       <div class="flex-1">
         @for (section of visibleSections(); track section.title) {
@@ -149,43 +163,32 @@ const DEV_ITEMS: SettingsNavItem[] = [
 
       @if (isRoleDev()) {
         <div class="mt-auto px-2 pb-2 pt-2 border-t border-[var(--border-color)]">
-          <ng-container *ngTemplateOutlet="devButton" />
+          @if (!isDevElevated()) {
+            <button
+              class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm
+                     text-amber-400 border border-amber-500/30 bg-amber-500/5
+                     hover:bg-amber-500/15 transition-colors cursor-pointer"
+              (click)="showElevationModal.set(true)"
+            >
+              <mat-icon class="!text-[18px] !w-[18px] !h-[18px]">lock</mat-icon>
+              <span>Elevar para DEV</span>
+            </button>
+          } @else {
+            <div class="flex items-center gap-2 px-3 py-2 rounded-lg border
+                        border-green-500/30 bg-green-500/5">
+              <mat-icon class="!text-[18px] !w-[18px] !h-[18px]" style="color:#4ade80">lock_open</mat-icon>
+              <span class="text-xs flex-1" style="color:#4ade80">DEV — ⏱ {{ devMinutesLeft() }}min</span>
+              <button mat-icon-button class="!w-6 !h-6 !min-w-0"
+                      (click)="revokeDevAccess()" matTooltip="Revogar acesso DEV">
+                <mat-icon class="!text-[14px]" style="color:#f87171">logout</mat-icon>
+              </button>
+            </div>
+          }
         </div>
       }
     </aside>
 
-    <!-- DEV button template (reutilizado mobile + desktop) -->
-    <ng-template #devButton>
-      @if (!isDevElevated()) {
-        <button
-          class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm
-                 text-amber-400 border border-amber-500/30 bg-amber-500/5
-                 hover:bg-amber-500/15 transition-colors cursor-pointer"
-          (click)="showElevationModal.set(true)"
-        >
-          <mat-icon class="!text-[18px] !w-[18px] !h-[18px]">lock</mat-icon>
-          <span>Elevar para DEV</span>
-        </button>
-      } @else {
-        <div class="flex items-center gap-2 px-3 py-2 rounded-lg border
-                    border-green-500/30 bg-green-500/5">
-          <mat-icon class="!text-[18px] !w-[18px] !h-[18px] text-green-400">lock_open</mat-icon>
-          <span class="text-xs text-green-400 flex-1">
-            DEV — ⏱ {{ devMinutesLeft() }}min
-          </span>
-          <button
-            mat-icon-button
-            class="!w-6 !h-6 !min-w-0"
-            (click)="revokeDevAccess()"
-            matTooltip="Revogar acesso DEV"
-          >
-            <mat-icon class="!text-[14px] !text-red-400">logout</mat-icon>
-          </button>
-        </div>
-      }
-    </ng-template>
-
-    <!-- Settings content -->
+    <!-- Content -->
     <div class="flex-1 overflow-y-auto">
       @if (activeSection()) {
         <nav
@@ -204,36 +207,19 @@ const DEV_ITEMS: SettingsNavItem[] = [
     `
       :host {
         display: flex;
-        flex-direction: column;
         flex: 1;
         min-height: 0;
+        flex-direction: column;
       }
       @media (min-width: 640px) {
-        :host {
-          flex-direction: row;
-        }
+        :host { flex-direction: row; }
       }
-      .settings-nav {
-        background: var(--bg-secondary);
-        border-color: var(--border-color);
-      }
-      .nav-section-label {
-        color: var(--text-secondary);
-      }
-      .settings-nav-item {
-        color: var(--text-secondary);
-      }
-      .settings-nav-item:hover {
-        background: var(--surface-hover);
-        color: var(--text-primary);
-      }
-      .settings-nav-active {
-        color: var(--active-color) !important;
-        background: var(--active-bg) !important;
-      }
-      .settings-nav-active mat-icon {
-        color: var(--active-color) !important;
-      }
+      .settings-nav { background: var(--bg-secondary); border-color: var(--border-color); }
+      .nav-section-label { color: var(--text-secondary); }
+      .settings-nav-item { color: var(--text-secondary); }
+      .settings-nav-item:hover { background: var(--surface-hover); color: var(--text-primary); }
+      .settings-nav-active { color: var(--active-color) !important; background: var(--active-bg) !important; }
+      .settings-nav-active mat-icon { color: var(--active-color) !important; }
     `,
   ],
 })
@@ -241,7 +227,6 @@ export class SettingsShellComponent {
   private readonly store = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly activatedRoute = inject(ActivatedRoute);
-  private readonly destroyRef = inject(DestroyRef);
 
   readonly mobileOpen = signal(false);
   readonly showElevationModal = signal(false);
@@ -249,38 +234,13 @@ export class SettingsShellComponent {
   readonly isRoleDev = computed(() => this.store.hasRole(ROLES.ROLE_DEV));
   readonly isDevElevated = computed(() => this.store.isDevElevated());
 
-  // Tick local para atualizar o timer do DEV token a cada segundo
-  private readonly _devTick = signal(0);
-  readonly devSecondsLeft = computed(() => {
-    this._devTick();
-    return Math.max(0, Math.ceil((this.store.devTokenExpiresAt() - Date.now()) / 1000));
+  // Tick a cada segundo para atualizar o contador DEV — sem effect(), sem setInterval manual.
+  private readonly _tick = toSignal(interval(1000).pipe(takeUntilDestroyed()), { initialValue: 0 });
+
+  readonly devMinutesLeft = computed(() => {
+    this._tick(); // garante reavaliação a cada segundo
+    return Math.max(0, Math.ceil((this.store.devTokenExpiresAt() - Date.now()) / 60_000));
   });
-  readonly devMinutesLeft = computed(() => Math.ceil(this.devSecondsLeft() / 60));
-
-  private devTimerInterval: ReturnType<typeof setInterval> | null = null;
-
-  constructor() {
-    // Inicia/para o ticker do timer DEV quando o estado de elevação muda
-    effect(() => {
-      if (this.store.isDevElevated()) {
-        this.devTimerInterval = setInterval(
-          () => this._devTick.update((n) => n + 1),
-          1000,
-        );
-        this.destroyRef.onDestroy(() => this.stopDevTimer());
-      } else {
-        this.stopDevTimer();
-      }
-    });
-
-    // Abre o modal automaticamente se a rota pediu elevação DEV
-    effect(() => {
-      const query = this.activatedRoute.snapshot.queryParamMap.get('devRequired');
-      if (query === 'true' && this.isRoleDev() && !this.isDevElevated()) {
-        this.showElevationModal.set(true);
-      }
-    });
-  }
 
   readonly activeSection = toSignal(
     this.router.events.pipe(
@@ -307,7 +267,6 @@ export class SettingsShellComponent {
       sections.push({ title: 'Administração', items: adminItems });
     }
 
-    // Itens DEV só aparecem quando o token DEV estiver ativo
     if (elevated) {
       const devItems = DEV_ITEMS.filter(
         (item) => !item.permission || perms.includes(item.permission),
@@ -327,12 +286,5 @@ export class SettingsShellComponent {
   revokeDevAccess(): void {
     this.store.clearDevToken();
     this.router.navigate(['/app/settings/profile']);
-  }
-
-  private stopDevTimer(): void {
-    if (this.devTimerInterval !== null) {
-      clearInterval(this.devTimerInterval);
-      this.devTimerInterval = null;
-    }
   }
 }

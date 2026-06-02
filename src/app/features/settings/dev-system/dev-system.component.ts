@@ -1,17 +1,11 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ApiConfiguration } from '../../../api/api-configuration';
 import { StatsService } from '../../../core/admin/stats.service';
-
-interface HealthStatus {
-  status: 'UP' | 'DOWN' | 'OUT_OF_SERVICE' | string;
-  components?: Record<string, { status: string; details?: Record<string, unknown> }>;
-}
+import { DevService, HealthStatus } from '../../../core/dev/dev.service';
 
 interface SystemStats {
   totalUsers: number;
@@ -196,7 +190,7 @@ interface SystemStats {
   `],
 })
 export class DevSystemComponent implements OnInit {
-  private readonly http = inject(HttpClient);
+  private readonly devService = inject(DevService);
   private readonly config = inject(ApiConfiguration);
   private readonly statsService = inject(StatsService);
 
@@ -210,13 +204,13 @@ export class DevSystemComponent implements OnInit {
   readonly apiUrl = this.config.rootUrl;
   readonly environment = this.config.rootUrl.includes('localhost') ? 'desenvolvimento' : 'produção';
 
-  readonly healthComponents = () => {
+  readonly healthComponents = computed(() => {
     const components = this.health()?.components ?? {};
     return Object.entries(components).map(([name, val]) => ({
       name,
       status: val.status,
     }));
-  };
+  });
 
   ngOnInit(): void {
     this.loadAll();
@@ -235,9 +229,7 @@ export class DevSystemComponent implements OnInit {
   private async loadHealth(): Promise<void> {
     this.healthLoading.set(true);
     try {
-      const data = await firstValueFrom(
-        this.http.get<HealthStatus>(`${this.config.rootUrl}/actuator/health`),
-      );
+      const data = await this.devService.health();
       this.health.set(data);
       this.healthUpdatedAt.set(
         new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),

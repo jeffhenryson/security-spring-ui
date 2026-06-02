@@ -13,6 +13,7 @@ import { ProfileService } from '../../../core/profile/profile.service';
 import { passwordMatchValidator, passwordPolicyValidator } from '../../../core/validators/password.validators';
 import { PasswordStrengthComponent } from '../../../shared/password-strength/password-strength.component';
 import { HttpErrorResponse } from '@angular/common/http';
+import { ChangePasswordModalComponent, PasswordConfirmData } from './change-password-modal.component';
 
 @Component({
   selector: 'app-profile',
@@ -26,6 +27,7 @@ import { HttpErrorResponse } from '@angular/common/http';
     MatProgressSpinnerModule,
     MatIconModule,
     PasswordStrengthComponent,
+    ChangePasswordModalComponent,
   ],
   template: `
     <div class="p-6 max-w-2xl mx-auto flex flex-col gap-6">
@@ -149,10 +151,17 @@ import { HttpErrorResponse } from '@angular/common/http';
             <mat-label>Senha atual</mat-label>
             <input
               matInput
-              type="password"
+              [type]="showEmailPwd() ? 'text' : 'password'"
               formControlName="currentPassword"
               autocomplete="current-password"
             />
+            <button mat-icon-button matSuffix type="button"
+                    (mousedown)="showEmailPwd.set(true)"
+                    (mouseup)="showEmailPwd.set(false)"
+                    (mouseleave)="showEmailPwd.set(false)"
+                    aria-label="Mostrar senha">
+              <mat-icon class="!text-[18px]">{{ showEmailPwd() ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
             <mat-hint>Necessário apenas ao alterar o email.</mat-hint>
           </mat-form-field>
 
@@ -264,59 +273,17 @@ import { HttpErrorResponse } from '@angular/common/http';
           </div>
         </form>
 
-        <!-- Modal de confirmação com 2FA + logout de dispositivos -->
-        @if (showPwdModal()) {
-          <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-               (click)="showPwdModal.set(false)">
-            <div class="bg-[var(--surface-color)] border border-[var(--border-color)] rounded-2xl p-6 w-full max-w-sm shadow-2xl mx-4"
-                 (click)="$event.stopPropagation()">
-              <h4 class="text-base font-semibold text-[var(--text-primary)] mt-0 mb-4">
-                Confirmar troca de senha
-              </h4>
-
-              @if (totpEnabled()) {
-                <p class="text-sm text-[var(--text-secondary)] mb-3">
-                  Insira o código do seu app autenticador para confirmar.
-                </p>
-                <mat-form-field appearance="outline" class="w-full">
-                  <mat-label>Código 2FA (6 dígitos)</mat-label>
-                  <input matInput maxlength="6" inputmode="numeric" autocomplete="one-time-code"
-                         [value]="pwdModalTotpCode()"
-                         (input)="pwdModalTotpCode.set($any($event.target).value)" />
-                </mat-form-field>
-              }
-
-              <label class="flex items-center gap-3 cursor-pointer mt-2 mb-4">
-                <input type="checkbox"
-                       class="w-4 h-4 accent-[var(--active-color)] cursor-pointer"
-                       [checked]="pwdModalLogoutDevices()"
-                       (change)="pwdModalLogoutDevices.set($any($event.target).checked)" />
-                <span class="text-sm text-[var(--text-primary)]">
-                  Encerrar sessão em outros dispositivos
-                </span>
-              </label>
-
-              @if (pwdModalError()) {
-                <p class="text-red-400 text-sm mb-3">{{ pwdModalError() }}</p>
-              }
-
-              <div class="flex gap-3 justify-end">
-                <button mat-stroked-button type="button" (click)="showPwdModal.set(false)">
-                  Cancelar
-                </button>
-                <button mat-flat-button type="button"
-                        [disabled]="pwdModalLoading()"
-                        (click)="confirmPasswordChange()">
-                  @if (pwdModalLoading()) {
-                    <mat-spinner diameter="18" class="mr-2" />
-                  }
-                  Confirmar
-                </button>
-              </div>
-            </div>
-          </div>
-        }
       </section>
+
+      @if (showPwdModal()) {
+        <app-change-password-modal
+          [totpEnabled]="totpEnabled()"
+          [loading]="pwdModalLoading()"
+          [error]="pwdModalError()"
+          (confirmed)="onPasswordModalConfirmed($event)"
+          (cancelled)="showPwdModal.set(false)"
+        />
+      }
       } <!-- end @else -->
     </div>
   `,
@@ -339,14 +306,12 @@ export class ProfileComponent {
   readonly saving = signal(false);
   readonly profileError = signal('');
   readonly savingPwd = signal(false);
+  readonly showEmailPwd = signal(false);
   readonly showCurrentPwd = signal(false);
   readonly showNewPwd = signal(false);
   readonly showConfirmPwd = signal(false);
 
-  // Modal de confirmação de troca de senha
   readonly showPwdModal = signal(false);
-  readonly pwdModalTotpCode = signal('');
-  readonly pwdModalLogoutDevices = signal(false);
   readonly pwdModalLoading = signal(false);
   readonly pwdModalError = signal('');
 
@@ -385,6 +350,11 @@ export class ProfileComponent {
   onFileSelected(event: Event): void {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      this.snackBar.open('Imagem muito grande. O tamanho máximo é 2 MB.', 'Fechar', { duration: 4000 });
+      (event.target as HTMLInputElement).value = '';
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       const img = new Image();
@@ -467,9 +437,6 @@ export class ProfileComponent {
   changePassword(): void {
     if (this.passwordForm.invalid) return;
     if (this.totpEnabled()) {
-      // Abre modal para coletar código 2FA e escolha de logout
-      this.pwdModalTotpCode.set('');
-      this.pwdModalLogoutDevices.set(false);
       this.pwdModalError.set('');
       this.showPwdModal.set(true);
     } else {
@@ -477,29 +444,22 @@ export class ProfileComponent {
     }
   }
 
-  async confirmPasswordChange(): Promise<void> {
-    if (this.totpEnabled() && this.pwdModalTotpCode().length !== 6) {
-      this.pwdModalError.set('Informe o código de 6 dígitos do seu app autenticador.');
-      return;
-    }
+  async onPasswordModalConfirmed(data: PasswordConfirmData): Promise<void> {
     this.pwdModalLoading.set(true);
     this.pwdModalError.set('');
-    await this.executePasswordChange(this.pwdModalTotpCode() || undefined);
+    await this.executePasswordChange(data.totpCode, data.revokeOtherSessions);
     if (!this.pwdModalError()) {
       this.showPwdModal.set(false);
-      if (this.pwdModalLogoutDevices()) {
-        await this.authService.logout();
-      }
     }
     this.pwdModalLoading.set(false);
   }
 
-  private async executePasswordChange(totpCode?: string): Promise<void> {
+  private async executePasswordChange(totpCode?: string, revokeOtherSessions = false): Promise<void> {
     this.savingPwd.set(true);
     this.passwordError.set('');
     const { currentPassword, newPassword } = this.passwordForm.getRawValue();
     try {
-      await this.profileService.changePassword({ currentPassword, newPassword, totpCode });
+      await this.profileService.changePassword({ currentPassword, newPassword, totpCode, revokeOtherSessions });
       this.passwordForm.reset();
       this.snackBar.open('Senha alterada com sucesso!', 'OK', { duration: 3000 });
     } catch (err) {
