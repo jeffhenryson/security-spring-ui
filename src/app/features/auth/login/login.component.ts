@@ -8,9 +8,9 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AuthService } from '../../../core/auth/auth.service';
+import { GoogleAuthService } from '../../../core/auth/google-auth.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { isTwoFactorChallenge } from '../../../core/auth/models/auth.models';
-import { environment } from '../../../../environments/environment';
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS = 30_000;
@@ -143,6 +143,7 @@ const LOCKOUT_STORAGE_KEY = 'ss_login_lockout';
 export class LoginComponent {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
+  private readonly googleAuthService = inject(GoogleAuthService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly snackBar = inject(MatSnackBar);
@@ -173,23 +174,26 @@ export class LoginComponent {
   });
 
   async loginWithGoogle(): Promise<void> {
-    const oauthUrl = `${environment.apiUrl}/oauth2/authorization/google`;
+    if (!this.googleAuthService.isConfigured) {
+      this.snackBar.open('Login com Google não está configurado.', 'Fechar', { duration: 4000 });
+      return;
+    }
+    this.loading.set(true);
+    this.errorMsg.set('');
     try {
-      // redirect:'manual' devolve type='opaqueredirect' quando o backend redireciona p/ Google.
-      // Se retornar 4xx/5xx (OAuth2 não configurado), type='basic' e mostramos uma mensagem.
-      const res = await fetch(oauthUrl, { redirect: 'manual', credentials: 'include' });
-      if (res.type === 'opaqueredirect') {
-        window.location.href = oauthUrl;
-      } else {
-        this.snackBar.open(
-          'Login com Google não está disponível. Verifique a configuração do servidor.',
-          'Fechar',
-          { duration: 6000 },
-        );
-      }
-    } catch {
-      // Erro de rede / CORS — tenta o redirect direto assim mesmo
-      window.location.href = oauthUrl;
+      const idToken = await this.googleAuthService.promptForToken();
+      const pair = await this.googleAuthService.exchangeToken(idToken);
+      await this.authService.handleTokenPair(pair);
+      const raw = this.route.snapshot.queryParamMap.get('returnUrl') ?? '';
+      const dest = raw.startsWith('/') && !raw.startsWith('//') ? raw : '/app/dashboard';
+      this.router.navigateByUrl(dest);
+    } catch (err) {
+      const msg = err instanceof Error && err.message === 'popup_dismissed'
+        ? ''
+        : 'Não foi possível entrar com Google. Tente novamente.';
+      this.errorMsg.set(msg);
+    } finally {
+      this.loading.set(false);
     }
   }
 

@@ -1,8 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { Router, NavigationEnd, ActivatedRoute } from '@angular/router';
+import { Router, NavigationEnd, ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatIconModule } from '@angular/material/icon';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map, startWith } from 'rxjs';
 import { AuthStore } from '../../core/auth/auth.store';
@@ -13,8 +14,26 @@ import { ThemeService, Theme } from '../../core/theme/theme.service';
   selector: 'app-topbar',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatButtonModule, MatTooltipModule, MatProgressSpinnerModule],
+  imports: [MatButtonModule, MatTooltipModule, MatProgressSpinnerModule, MatIconModule, RouterLink],
   template: `
+    <!-- Banner de email pendente -->
+    @if (hasPendingEmail()) {
+      <div class="flex items-center gap-2 px-4 py-1.5 text-xs shrink-0"
+           style="background:#78350f;color:#fef3c7;border-bottom:1px solid #92400e">
+        <mat-icon class="!text-[14px] !w-[14px] !h-[14px]">mark_email_unread</mat-icon>
+        <span>
+          Confirmação pendente para
+          <strong>{{ pendingEmail() }}</strong>.
+          Verifique sua caixa de entrada.
+        </span>
+        <a routerLink="/app/settings/profile"
+           class="ml-auto underline"
+           style="color:#fde68a">
+          Ver perfil
+        </a>
+      </div>
+    }
+
     <header
       class="flex items-center h-14 px-4 border-b shrink-0"
       style="background:var(--bg-primary);border-color:var(--border-color)"
@@ -104,6 +123,8 @@ export class TopbarComponent {
   );
 
   readonly isDark = computed(() => this.themeService.resolvedTheme() === 'dark');
+  readonly hasPendingEmail = computed(() => this.store.hasPendingEmail());
+  readonly pendingEmail = computed(() => this.store.currentUser()?.pendingEmail ?? '');
   readonly loggingOut = signal(false);
   readonly currentTheme = computed(() => this.themeService.theme());
 

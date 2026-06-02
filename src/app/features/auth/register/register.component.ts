@@ -9,9 +9,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../../core/auth/auth.service';
+import { GoogleAuthService } from '../../../core/auth/google-auth.service';
 import { passwordMatchValidator } from '../../../core/validators/password.validators';
 import { PasswordStrengthComponent } from '../../../shared/password-strength/password-strength.component';
-import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-register',
@@ -180,6 +180,7 @@ import { environment } from '../../../../environments/environment';
 export class RegisterComponent {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
+  private readonly googleAuthService = inject(GoogleAuthService);
   private readonly snackBar = inject(MatSnackBar);
 
   readonly loading = signal(false);
@@ -199,20 +200,25 @@ export class RegisterComponent {
   );
 
   async registerWithGoogle(): Promise<void> {
-    const oauthUrl = `${environment.apiUrl}/oauth2/authorization/google`;
+    if (!this.googleAuthService.isConfigured) {
+      this.snackBar.open('Registro com Google não está configurado.', 'Fechar', { duration: 4000 });
+      return;
+    }
+    this.loading.set(true);
+    this.errorMsg.set('');
     try {
-      const res = await fetch(oauthUrl, { redirect: 'manual', credentials: 'include' });
-      if (res.type === 'opaqueredirect') {
-        window.location.href = oauthUrl;
-      } else {
-        this.snackBar.open(
-          'Registro com Google não está disponível. Verifique a configuração do servidor.',
-          'Fechar',
-          { duration: 6000 },
-        );
-      }
-    } catch {
-      window.location.href = oauthUrl;
+      const idToken = await this.googleAuthService.promptForToken();
+      // POST /auth/oauth2/google: cria conta se não existir, faz login se já existir
+      const pair = await this.googleAuthService.exchangeToken(idToken);
+      await this.authService.handleTokenPair(pair);
+      this.success.set(true);
+    } catch (err) {
+      const msg = err instanceof Error && err.message === 'popup_dismissed'
+        ? ''
+        : 'Não foi possível registrar com Google. Tente novamente.';
+      this.errorMsg.set(msg);
+    } finally {
+      this.loading.set(false);
     }
   }
 
