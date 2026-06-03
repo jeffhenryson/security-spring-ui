@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
-import { authGuard, alreadyAuthGuard } from './core/rbac/permission.guard';
+import { authGuard, alreadyAuthGuard, permissionGuard } from './core/rbac/permission.guard';
+import { PERMISSIONS } from './core/rbac/permissions.constants';
 
 export const routes: Routes = [
   {
@@ -32,6 +33,7 @@ export const routes: Routes = [
       },
       {
         path: 'template',
+        canMatch: [permissionGuard(PERMISSIONS.DEV_ROLE_MANAGE)],
         data: { title: 'Template' },
         loadComponent: () =>
           import('./features/template/template.component').then((m) => m.TemplateComponent),

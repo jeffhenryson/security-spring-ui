@@ -5,7 +5,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AuthStore } from '../../core/auth/auth.store';
-import { PERMISSIONS } from '../../core/rbac/permissions.constants';
+import { AppConfigStore } from '../../core/config/app-config.store';
+import { PERMISSIONS, ROLES } from '../../core/rbac/permissions.constants';
 import { StatsService, StatsResponse } from '../../core/admin/stats.service';
 import { AuditLogsService, AuditLogResponse } from '../../core/admin/audit-logs.service';
 import { DateFormatPipe } from '../../shared/date-format.pipe';
@@ -61,7 +62,80 @@ import { DateFormatPipe } from '../../shared/date-format.pipe';
         </div>
       }
 
-      <!-- Cards de stats -->
+      <!-- Seção exclusiva do usuário comum (sem permissões admin) -->
+      @if (isRegularUser()) {
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <!-- Status da conta -->
+          <div class="bg-[var(--surface-color)] border border-[var(--border-color)] rounded-xl p-4 flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg shrink-0 flex items-center justify-center"
+                 [class]="totpEnabled() ? 'bg-emerald-950' : 'bg-orange-950'">
+              <mat-icon [class]="totpEnabled() ? 'text-emerald-400' : 'text-orange-400'">
+                {{ totpEnabled() ? 'verified_user' : 'security' }}
+              </mat-icon>
+            </div>
+            <div>
+              <p class="text-xs text-[var(--text-secondary)] m-0">Autenticação 2FA</p>
+              <p class="text-sm font-semibold m-0" [class]="totpEnabled() ? 'text-emerald-400' : 'text-orange-400'">
+                {{ totpEnabled() ? 'Ativo' : 'Não configurado' }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Status do email -->
+          <div class="bg-[var(--surface-color)] border border-[var(--border-color)] rounded-xl p-4 flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg shrink-0 flex items-center justify-center"
+                 [class]="emailVerified() ? 'bg-blue-950' : 'bg-yellow-950'">
+              <mat-icon [class]="emailVerified() ? 'text-blue-400' : 'text-yellow-400'">
+                {{ emailVerified() ? 'mark_email_read' : 'mark_email_unread' }}
+              </mat-icon>
+            </div>
+            <div>
+              <p class="text-xs text-[var(--text-secondary)] m-0">Email</p>
+              <p class="text-sm font-semibold m-0" [class]="emailVerified() ? 'text-blue-400' : 'text-yellow-400'">
+                {{ emailVerified() ? 'Verificado' : (hasEmail() ? 'Pendente' : 'Não cadastrado') }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Suas permissões -->
+          <div class="bg-[var(--surface-color)] border border-[var(--border-color)] rounded-xl p-4 flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg shrink-0 bg-cyan-950 flex items-center justify-center">
+              <mat-icon class="text-cyan-400">key</mat-icon>
+            </div>
+            <div>
+              <p class="text-xs text-[var(--text-secondary)] m-0">Permissões</p>
+              <p class="text-sm font-semibold text-[var(--text-primary)] m-0">{{ totalPermissions() }} ativas</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ações rápidas para usuário comum -->
+        <div class="mb-6">
+          <h3 class="text-sm font-semibold text-[var(--text-primary)] mb-3">Configurações da conta</h3>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <a routerLink="/app/settings/profile"
+               class="flex flex-col items-start gap-2 p-4 bg-[var(--surface-color)] border border-[var(--border-color)] rounded-xl hover:bg-[var(--surface-hover)] transition-colors no-underline">
+              <mat-icon class="text-[var(--active-color)]">person</mat-icon>
+              <span class="text-sm font-medium text-[var(--text-primary)]">Perfil</span>
+              <span class="text-xs text-[var(--text-secondary)]">Nome, foto e email</span>
+            </a>
+            <a routerLink="/app/settings/security"
+               class="flex flex-col items-start gap-2 p-4 bg-[var(--surface-color)] border border-[var(--border-color)] rounded-xl hover:bg-[var(--surface-hover)] transition-colors no-underline">
+              <mat-icon class="text-violet-400">security</mat-icon>
+              <span class="text-sm font-medium text-[var(--text-primary)]">Segurança</span>
+              <span class="text-xs text-[var(--text-secondary)]">Senha e 2FA</span>
+            </a>
+            <a routerLink="/app/settings/theme"
+               class="flex flex-col items-start gap-2 p-4 bg-[var(--surface-color)] border border-[var(--border-color)] rounded-xl hover:bg-[var(--surface-hover)] transition-colors no-underline">
+              <mat-icon class="text-amber-400">palette</mat-icon>
+              <span class="text-sm font-medium text-[var(--text-primary)]">Tema</span>
+              <span class="text-xs text-[var(--text-secondary)]">Aparência do sistema</span>
+            </a>
+          </div>
+        </div>
+      }
+
+      <!-- Cards de stats (admin/dev) -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" aria-live="polite">
         <!-- Card: Total de usuários (só com USER_READ) -->
         @if (canReadUsers()) {
@@ -227,13 +301,12 @@ import { DateFormatPipe } from '../../shared/date-format.pipe';
 })
 export class DashboardComponent implements OnInit {
   private readonly store = inject(AuthStore);
+  private readonly configStore = inject(AppConfigStore);
   private readonly statsService = inject(StatsService);
   private readonly auditLogsService = inject(AuditLogsService);
   private readonly snackBar = inject(MatSnackBar);
 
   readonly username = computed(() => this.store.currentUser()?.username ?? '');
-  // Só mostra o banner se o usuário TEM email cadastrado e ele ainda não foi verificado.
-  // Usuários criados sem email (ex.: criados por admin) não devem ver este aviso.
   readonly emailUnverified = computed(() =>
     !!this.store.currentUser()?.email && !this.store.isEmailVerified(),
   );
@@ -244,6 +317,14 @@ export class DashboardComponent implements OnInit {
   readonly canReadUsers = computed(() => this.store.hasPermission(PERMISSIONS.USER_READ));
   readonly canReadRoles = computed(() => this.store.hasPermission(PERMISSIONS.ROLE_READ));
   readonly canReadAudit = computed(() => this.store.hasPermission(PERMISSIONS.AUDIT_READ));
+
+  // User-level signals
+  readonly isRegularUser = computed(() =>
+    !this.store.hasRole(ROLES.ROLE_ADMIN) && !this.store.hasRole(ROLES.ROLE_DEV),
+  );
+  readonly totpEnabled = computed(() => !!this.store.currentUser()?.totpEnabled);
+  readonly emailVerified = computed(() => this.store.isEmailVerified());
+  readonly hasEmail = computed(() => !!this.store.currentUser()?.email);
 
   readonly disabledUsers = computed(() => {
     const s = this.stats();
