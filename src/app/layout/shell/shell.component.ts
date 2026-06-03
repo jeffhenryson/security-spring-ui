@@ -1,14 +1,17 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { RouterLink, RouterOutlet } from '@angular/router';
 import { trigger, transition, style, animate, query } from '@angular/animations';
+import { MatIconModule } from '@angular/material/icon';
 import { SidebarComponent } from '../sidebar/sidebar.component';
 import { TopbarComponent } from '../topbar/topbar.component';
+import { DevElevationBannerComponent } from '../../features/settings/dev-elevation/dev-elevation-banner.component';
+import { AuthStore } from '../../core/auth/auth.store';
 
 @Component({
   selector: 'app-shell',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, SidebarComponent, TopbarComponent],
+  imports: [RouterOutlet, RouterLink, SidebarComponent, TopbarComponent, DevElevationBannerComponent, MatIconModule],
   animations: [
     trigger('routeAnimations', [
       transition('* <=> *', [
@@ -20,10 +23,29 @@ import { TopbarComponent } from '../topbar/topbar.component';
     ]),
   ],
   template: `
-    <div class="flex h-screen overflow-hidden">
-      <app-sidebar />
-      <div class="flex flex-col flex-1 min-w-0">
-        <app-topbar />
+    <div class="flex flex-col h-screen overflow-hidden">
+      <app-topbar />
+      <app-dev-elevation-banner />
+
+      @if (showEmailBanner()) {
+        <div class="flex items-center gap-2 px-4 py-1.5 text-xs shrink-0"
+             style="background:#1c1917;color:#fcd34d;border-bottom:1px solid #44403c">
+          <mat-icon class="!text-[14px] !w-[14px] !h-[14px]" style="color:#fbbf24">mail_outline</mat-icon>
+          <span>
+            @if (emailNotVerified()) {
+              Email cadastrado mas ainda não verificado. Verifique sua caixa de entrada.
+            } @else {
+              Nenhum email cadastrado. Cadastre um email para recuperar o acesso à conta.
+            }
+          </span>
+          <a routerLink="/app/settings/profile" class="ml-auto underline" style="color:#fcd34d">
+            Configurar
+          </a>
+        </div>
+      }
+
+      <div class="flex flex-1 min-h-0 overflow-hidden">
+        <app-sidebar />
         <main class="flex-1 overflow-y-auto flex flex-col" [@routeAnimations]="getAnimation(outlet)">
           <router-outlet #outlet="outlet" />
         </main>
@@ -32,6 +54,20 @@ import { TopbarComponent } from '../topbar/topbar.component';
   `,
 })
 export class ShellComponent {
+  private readonly store = inject(AuthStore);
+
+  readonly showEmailBanner = computed(() => {
+    const user = this.store.currentUser();
+    if (!user) return false;
+    // Show if no email OR email exists but not verified
+    return !user.email || !user.emailVerified;
+  });
+
+  readonly emailNotVerified = computed(() => {
+    const user = this.store.currentUser();
+    return !!user?.email && !user.emailVerified;
+  });
+
   getAnimation(outlet: RouterOutlet): string {
     return outlet?.activatedRouteData?.['title'] ?? '';
   }
