@@ -1,11 +1,13 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ApiConfiguration } from '../../../api/api-configuration';
 import { StatsService } from '../../../core/admin/stats.service';
-import { DevService, HealthStatus } from '../../../core/dev/dev.service';
+import { DevService, HealthStatus, SystemInfo } from '../../../core/dev/dev.service';
+import { environment } from '../../../../environments/environment';
 
 interface SystemStats {
   totalUsers: number;
@@ -141,9 +143,58 @@ interface SystemStats {
           </div>
           <div class="config-row">
             <span class="config-key">Ambiente</span>
-            <code class="config-val">{{ environment }}</code>
+            <code class="config-val">{{ activeProfile() }}</code>
           </div>
         </div>
+      </section>
+
+      <!-- Grafana panels -->
+      @if (grafanaUrl()) {
+        <section class="flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <h4 class="text-sm font-semibold text-[var(--text-primary)] m-0">Métricas ao vivo</h4>
+            <a [href]="grafanaDashboardUrl()" target="_blank" rel="noopener"
+               class="text-xs text-[var(--active-color)] hover:underline flex items-center gap-1">
+              <mat-icon class="!text-[14px] !w-[14px] !h-[14px]">open_in_new</mat-icon>
+              Abrir Grafana
+            </a>
+          </div>
+          <p class="text-xs text-[var(--text-secondary)] -mt-2">
+            Via Prometheus · atualização a cada 30s
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            @for (panel of grafanaPanels(); track panel.id) {
+              <div class="border border-[var(--border-color)] rounded-xl overflow-hidden bg-[var(--surface-color)]">
+                <p class="text-xs text-[var(--text-secondary)] px-3 pt-2 pb-1 m-0">{{ panel.title }}</p>
+                <iframe
+                  [src]="panel.safeUrl"
+                  width="100%"
+                  height="180"
+                  frameborder="0"
+                  title="{{ panel.title }}"
+                ></iframe>
+              </div>
+            }
+          </div>
+        </section>
+      } @else {
+        <div class="flex items-center gap-2 p-3 rounded-lg border border-[var(--border-color)] text-[var(--text-secondary)] text-sm">
+          <mat-icon class="!text-[18px]">bar_chart</mat-icon>
+          <span>Grafana não configurado. Defina <code>grafanaUrl</code> no environment.</span>
+        </div>
+      }
+
+      <!-- Swagger UI -->
+      <section>
+        <h4 class="text-sm font-semibold text-[var(--text-secondary)] uppercase tracking-widest mb-3">
+          API Docs
+        </h4>
+        <a [href]="swaggerUrl()" target="_blank" rel="noopener"
+           class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--surface-color)] text-sm text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors no-underline">
+          <mat-icon class="!text-[18px] !text-green-400">api</mat-icon>
+          Abrir Swagger UI
+          <mat-icon class="!text-[14px] !w-[14px] !h-[14px] ml-auto text-[var(--text-muted)]">open_in_new</mat-icon>
+        </a>
       </section>
     </div>
   `,
@@ -193,6 +244,7 @@ export class DevSystemComponent implements OnInit {
   private readonly devService = inject(DevService);
   private readonly config = inject(ApiConfiguration);
   private readonly statsService = inject(StatsService);
+  private readonly sanitizer = inject(DomSanitizer);
 
   readonly loading = signal(false);
   readonly healthLoading = signal(false);
@@ -202,7 +254,32 @@ export class DevSystemComponent implements OnInit {
   readonly healthUpdatedAt = signal('');
 
   readonly apiUrl = this.config.rootUrl;
-  readonly environment = this.config.rootUrl.includes('localhost') ? 'desenvolvimento' : 'produção';
+  readonly activeProfile = signal('carregando...');
+  readonly swaggerUrl = computed(() => `${this.config.rootUrl}/swagger-ui/index.html`);
+
+  readonly grafanaUrl = signal(environment.grafanaUrl ?? '');
+
+  readonly grafanaDashboardUrl = computed(() => {
+    const base = this.grafanaUrl();
+    return base ? `${base}/d/security-spring/security-spring` : '';
+  });
+
+  readonly grafanaPanels = computed<Array<{ id: number; title: string; safeUrl: SafeResourceUrl }>>(() => {
+    const base = this.grafanaUrl();
+    if (!base) return [];
+    // uid/slug do dashboard provisionado em grafana/provisioning/dashboards/security-spring.json
+    const dash = 'security-spring/security-spring';
+    const common = `orgId=1&refresh=30s&theme=dark`;
+    return [
+      { id: 1,  title: 'Logins',         url: `${base}/d-solo/${dash}?${common}&panelId=1` },
+      { id: 35, title: 'Latência HTTP',   url: `${base}/d-solo/${dash}?${common}&panelId=35` },
+      { id: 3,  title: 'Heap JVM',        url: `${base}/d-solo/${dash}?${common}&panelId=3` },
+    ].map((p) => ({
+      id: p.id,
+      title: p.title,
+      safeUrl: this.sanitizer.bypassSecurityTrustResourceUrl(p.url),
+    }));
+  });
 
   readonly healthComponents = computed(() => {
     const components = this.health()?.components ?? {};
@@ -222,8 +299,20 @@ export class DevSystemComponent implements OnInit {
 
   private async loadAll(): Promise<void> {
     this.loading.set(true);
-    await Promise.allSettled([this.loadHealth(), this.loadStats()]);
+    await Promise.allSettled([this.loadHealth(), this.loadStats(), this.loadSystemInfo()]);
     this.loading.set(false);
+  }
+
+  private async loadSystemInfo(): Promise<void> {
+    try {
+      const info = await this.devService.systemInfo();
+      this.activeProfile.set(info.profile || 'unknown');
+      if (info.status === 'UP') {
+        this.health.update((h) => h ?? { status: 'UP' });
+      }
+    } catch {
+      // keep 'carregando...' if it fails
+    }
   }
 
   private async loadHealth(): Promise<void> {

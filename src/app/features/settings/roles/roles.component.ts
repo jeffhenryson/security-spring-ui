@@ -20,7 +20,7 @@ import { runWithFeedback, httpErrMsg } from '../../../core/admin/admin-feedback'
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { EmptyStateComponent } from '../../../shared/empty-state/empty-state.component';
 import { PagedState } from '../../../core/admin/paged-state';
-import { PERMISSIONS } from '../../../core/rbac/permissions.constants';
+import { PERMISSIONS, ROLES } from '../../../core/rbac/permissions.constants';
 import { CreateRoleDialogComponent } from './dialogs/create-role.dialog';
 import { ManageRolePermissionsDialogComponent } from './dialogs/manage-role-permissions.dialog';
 
@@ -216,6 +216,9 @@ export class RolesComponent implements OnInit {
     const search = this.searchControl.value?.trim() ?? '';
     try {
       const res = await this.rolesService.list(this.paged.page(), this.paged.size(), search);
+      if (!this.store.hasPermission(PERMISSIONS.DEV_ROLE_MANAGE)) {
+        res.content = res.content.filter((r) => r.name !== ROLES.ROLE_DEV);
+      }
       this.paged.apply(res);
     } catch {
       this.snackBar.open('Erro ao carregar roles.', 'OK', { duration: 3000 });

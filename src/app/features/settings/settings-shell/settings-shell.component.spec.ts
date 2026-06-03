@@ -28,7 +28,6 @@ function makeStore(roles: string[] = [], elevated = false) {
     hasPermission: jest.fn(() => isAdmin),
     permissions: jest.fn(() => perms),
     isDevElevated: jest.fn(() => elevated),
-    devSecondsLeft: jest.fn(() => 0),
     devTokenExpiresAt: jest.fn(() => 0),
     clearDevToken: jest.fn(),
   } as unknown as AuthStore;

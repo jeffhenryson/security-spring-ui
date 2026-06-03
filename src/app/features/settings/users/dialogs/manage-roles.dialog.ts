@@ -13,7 +13,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AuthStore } from '../../../../core/auth/auth.store';
 import { UsersAdminService } from '../../../../core/admin/users-admin.service';
-import { PERMISSIONS } from '../../../../core/rbac/permissions.constants';
+import { PERMISSIONS, ROLES } from '../../../../core/rbac/permissions.constants';
 
 @Component({
   selector: 'app-manage-roles-dialog',
@@ -103,9 +103,11 @@ export class ManageRolesDialogComponent {
   readonly pendingRemove = signal<string | null>(null);
 
   readonly canAssign = computed(() => this.store.hasPermission(PERMISSIONS.USER_ROLE_ASSIGN));
-  readonly availableRoles = computed(() =>
-    this.data.allRoles.filter((r) => !this.currentRoles().includes(r)),
-  );
+  readonly canManageDev = computed(() => this.store.hasPermission(PERMISSIONS.DEV_ROLE_MANAGE));
+  readonly availableRoles = computed(() => {
+    const base = this.data.allRoles.filter((r) => !this.currentRoles().includes(r));
+    return this.canManageDev() ? base : base.filter((r) => r !== ROLES.ROLE_DEV);
+  });
 
   async addRole(): Promise<void> {
     const role = this.selectedRole();

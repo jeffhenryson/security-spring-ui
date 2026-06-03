@@ -15,6 +15,8 @@ import { AuthStore } from '../../../../core/auth/auth.store';
 import { RolesAdminService, RoleResponse } from '../../../../core/admin/roles-admin.service';
 import { PERMISSIONS } from '../../../../core/rbac/permissions.constants';
 
+const DEV_ONLY_PERMISSIONS = new Set(['DEV_ROLE_MANAGE', 'DEV_PERMISSION_MANAGE']);
+
 @Component({
   selector: 'app-manage-role-permissions-dialog',
   standalone: true,
@@ -86,9 +88,11 @@ export class ManageRolePermissionsDialogComponent {
   readonly submitting = signal(false);
 
   readonly canManage = computed(() => this.store.hasPermission(PERMISSIONS.ROLE_MANAGE_PERMISSIONS));
-  readonly availablePerms = computed(() =>
-    this.allPermissions().filter((p) => !this.role().permissions.includes(p)),
-  );
+  readonly canManageDev = computed(() => this.store.hasPermission(PERMISSIONS.DEV_ROLE_MANAGE));
+  readonly availablePerms = computed(() => {
+    const base = this.allPermissions().filter((p) => !this.role().permissions.includes(p));
+    return this.canManageDev() ? base : base.filter((p) => !DEV_ONLY_PERMISSIONS.has(p));
+  });
 
   async addPerm(): Promise<void> {
     const perm = this.selectedPerm();

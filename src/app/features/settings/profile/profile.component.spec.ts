@@ -4,7 +4,6 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { ProfileComponent } from './profile.component';
 import { AuthStore } from '../../../core/auth/auth.store';
 import { AuthService } from '../../../core/auth/auth.service';
-import { AvatarService } from '../../../core/auth/avatar.service';
 import { ProfileService } from '../../../core/profile/profile.service';
 import { CurrentUser } from '../../../core/auth/models/auth.models';
 
@@ -31,8 +30,6 @@ describe('ProfileComponent', () => {
     profileService = {
       updateProfile: jest.fn().mockResolvedValue(undefined),
       changePassword: jest.fn().mockResolvedValue(undefined),
-      uploadAvatar: jest.fn().mockResolvedValue(undefined),
-      deleteAvatar: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<ProfileService>;
 
     authService = { loadCurrentUser: jest.fn().mockResolvedValue(undefined) };
@@ -178,16 +175,4 @@ describe('ProfileComponent', () => {
     });
   });
 
-  // ── removeAvatar ──────────────────────────────────────────────────────────
-
-  describe('removeAvatar', () => {
-    it('chama profileService.deleteAvatar + avatarService.clearLocalAvatar e exibe snackbar', async () => {
-      const avatarService = TestBed.inject(AvatarService);
-      jest.spyOn(avatarService, 'clearLocalAvatar').mockImplementation(() => {});
-      await component.removeAvatar();
-      expect(profileService.deleteAvatar).toHaveBeenCalled();
-      expect(avatarService.clearLocalAvatar).toHaveBeenCalled();
-      expect(snackBar.open).toHaveBeenCalledWith('Foto removida.', 'OK', { duration: 2500 });
-    });
-  });
 });

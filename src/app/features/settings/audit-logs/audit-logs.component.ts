@@ -15,54 +15,10 @@ import { AuditLogsService, AuditLogResponse, AuditLogFilters } from '../../../co
 import { EmptyStateComponent } from '../../../shared/empty-state/empty-state.component';
 import { PagedState } from '../../../core/admin/paged-state';
 import { DateFormatPipe } from '../../../shared/date-format.pipe';
+import { AUDIT_ACTION_COLORS, AUDIT_DEV_ONLY_EVENTS, auditBadgeClass } from '../../../shared/audit-log.constants';
 
-const ACTION_COLORS: Record<string, string> = {
-  USER_LOGGED_IN: 'bg-blue-950 text-blue-300',
-  USER_LOGGED_OUT: 'bg-blue-950 text-blue-400',
-  LOGIN_FAILED: 'bg-orange-950 text-orange-300',
-  ACCOUNT_LOCKED: 'bg-red-950 text-red-300',
-  TOKEN_THEFT_DETECTED: 'bg-red-950 text-red-300',
-  USER_REGISTERED: 'bg-green-950 text-green-300',
-  USER_CREATED: 'bg-green-950 text-green-300',
-  USER_DELETED: 'bg-red-950 text-red-400',
-  USER_UPDATED: 'bg-sky-950 text-sky-300',
-  USER_ENABLED: 'bg-green-950 text-green-400',
-  USER_DISABLED: 'bg-red-950 text-red-300',
-  USER_ROLE_ASSIGNED: 'bg-violet-950 text-violet-300',
-  USER_ROLE_REMOVED: 'bg-violet-950 text-violet-400',
-  USER_PASSWORD_CHANGED: 'bg-yellow-950 text-yellow-300',
-  USER_EMAIL_CHANGED: 'bg-yellow-950 text-yellow-300',
-  USER_EMAIL_VERIFIED: 'bg-green-950 text-green-300',
-  USER_SESSIONS_CLEARED: 'bg-orange-950 text-orange-300',
-  ROLE_CREATED: 'bg-violet-950 text-violet-300',
-  ROLE_DELETED: 'bg-red-950 text-red-300',
-  PERMISSION_CREATED: 'bg-emerald-950 text-emerald-300',
-  PERMISSION_DELETED: 'bg-red-950 text-red-300',
-  PERMISSION_ASSIGNED_TO_ROLE: 'bg-emerald-950 text-emerald-300',
-  PERMISSION_REMOVED_FROM_ROLE: 'bg-emerald-950 text-emerald-400',
-  TOTP_ENABLED: 'bg-teal-950 text-teal-300',
-  TOTP_DISABLED: 'bg-teal-950 text-teal-400',
-  TOTP_BACKUP_CODES_REGENERATED: 'bg-teal-950 text-teal-300',
-  TOTP_REPLACED: 'bg-teal-950 text-teal-300',
-  PASSWORD_RESET_REQUESTED: 'bg-yellow-950 text-yellow-300',
-  PASSWORD_RESET_COMPLETED: 'bg-green-950 text-green-300',
-  EMAIL_CHANGE_REQUESTED: 'bg-yellow-950 text-yellow-300',
-  EMAIL_CHANGE_CONFIRMED: 'bg-green-950 text-green-300',
-  OAUTH_GOOGLE_LOGIN: 'bg-blue-950 text-blue-300',
-  ACCESS_DENIED: 'bg-orange-950 text-orange-300',
-  DEV_ELEVATION_COMPLETED: 'bg-amber-950 text-amber-300',
-};
-
-// Eventos exclusivos da view DEV — não aparecem no filtro do ADMIN
-const DEV_ONLY_EVENTS = new Set([
-  'LOGIN_FAILED',
-  'ACCOUNT_LOCKED',
-  'TOKEN_THEFT_DETECTED',
-  'DEV_ELEVATION_COMPLETED',
-]);
-
-const KNOWN_ACTIONS = Object.keys(ACTION_COLORS)
-  .filter((a) => !DEV_ONLY_EVENTS.has(a))
+const KNOWN_ACTIONS = Object.keys(AUDIT_ACTION_COLORS)
+  .filter((a) => !AUDIT_DEV_ONLY_EVENTS.has(a))
   .sort();
 
 @Component({
@@ -242,7 +198,7 @@ export class AuditLogsComponent implements OnInit {
     try {
       const res = await this.auditLogsService.list(this.paged.page(), this.paged.size(), filters);
       // Remove eventos exclusivos da área DEV — ADMIN não deve visualizá-los.
-      res.content = res.content.filter((l) => !DEV_ONLY_EVENTS.has(l.action));
+      res.content = res.content.filter((l) => !AUDIT_DEV_ONLY_EVENTS.has(l.action));
       this.paged.apply(res);
     } catch {
       this.snackBar.open('Erro ao carregar logs de auditoria.', 'OK', { duration: 3000 });
@@ -257,7 +213,7 @@ export class AuditLogsComponent implements OnInit {
   }
 
   badgeClass(action: string): string {
-    return ACTION_COLORS[action] ?? 'bg-[var(--surface-hover)] text-[var(--text-primary)]';
+    return auditBadgeClass(action);
   }
 
   exportCsv(): void {

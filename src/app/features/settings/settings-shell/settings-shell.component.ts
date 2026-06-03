@@ -19,6 +19,7 @@ import { filter, map, startWith } from 'rxjs';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { AuthStore } from '../../../core/auth/auth.store';
 import { PERMISSIONS, ROLES } from '../../../core/rbac/permissions.constants';
 import { DevElevationModalComponent } from '../dev-elevation/dev-elevation-modal.component';
@@ -48,9 +49,10 @@ const ADMIN_ITEMS: SettingsNavItem[] = [
 ];
 
 const DEV_ITEMS: SettingsNavItem[] = [
-  { label: 'Permissões', icon: 'key', route: 'permissions', permission: PERMISSIONS.DEV_PERMISSION_MANAGE },
   { label: 'Logs técnicos', icon: 'terminal', route: 'dev-logs', permission: PERMISSIONS.AUDIT_READ },
   { label: 'Sistema', icon: 'settings_applications', route: 'dev-system' },
+  { label: 'Usuários DEV', icon: 'admin_panel_settings', route: 'dev-users' },
+  { label: 'Config. Sistema', icon: 'tune', route: 'system-config' },
 ];
 
 @Component({
@@ -116,7 +118,7 @@ const DEV_ITEMS: SettingsNavItem[] = [
                   class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm
                          text-amber-400 border border-amber-500/30 bg-amber-500/5
                          hover:bg-amber-500/15 transition-colors cursor-pointer"
-                  (click)="showElevationModal.set(true)"
+                  (click)="tryElevate()"
                 >
                   <mat-icon class="!text-[18px] !w-[18px] !h-[18px]">lock</mat-icon>
                   <span>Elevar para DEV</span>
@@ -168,7 +170,7 @@ const DEV_ITEMS: SettingsNavItem[] = [
               class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm
                      text-amber-400 border border-amber-500/30 bg-amber-500/5
                      hover:bg-amber-500/15 transition-colors cursor-pointer"
-              (click)="showElevationModal.set(true)"
+              (click)="tryElevate()"
             >
               <mat-icon class="!text-[18px] !w-[18px] !h-[18px]">lock</mat-icon>
               <span>Elevar para DEV</span>
@@ -227,6 +229,7 @@ export class SettingsShellComponent {
   private readonly store = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly activatedRoute = inject(ActivatedRoute);
+  private readonly snackBar = inject(MatSnackBar);
 
   readonly mobileOpen = signal(false);
   readonly showElevationModal = signal(false);
@@ -258,13 +261,16 @@ export class SettingsShellComponent {
   readonly visibleSections = computed<SettingsSection[]>(() => {
     const perms = this.store.permissions();
     const elevated = this.store.isDevElevated();
+    const isAdminOrDev = this.store.hasRole(ROLES.ROLE_ADMIN) || this.store.hasRole(ROLES.ROLE_DEV);
     const sections: SettingsSection[] = [{ title: 'Conta', items: ACCOUNT_ITEMS }];
 
-    const adminItems = ADMIN_ITEMS.filter(
-      (item) => !item.permission || perms.includes(item.permission),
-    );
-    if (adminItems.length > 0) {
-      sections.push({ title: 'Administração', items: adminItems });
+    if (isAdminOrDev) {
+      const adminItems = ADMIN_ITEMS.filter(
+        (item) => !item.permission || perms.includes(item.permission),
+      );
+      if (adminItems.length > 0) {
+        sections.push({ title: 'Administração', items: adminItems });
+      }
     }
 
     if (elevated) {
@@ -278,6 +284,19 @@ export class SettingsShellComponent {
 
     return sections;
   });
+
+  tryElevate(): void {
+    if (!this.store.currentUser()?.totpEnabled) {
+      const ref = this.snackBar.open(
+        '2FA não configurado. É obrigatório para elevar o acesso DEV.',
+        'Configurar agora',
+        { duration: 6000 },
+      );
+      ref.onAction().subscribe(() => this.router.navigate(['/app/settings/security']));
+      return;
+    }
+    this.showElevationModal.set(true);
+  }
 
   onElevated(): void {
     this.showElevationModal.set(false);

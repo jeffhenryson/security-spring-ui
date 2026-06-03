@@ -15,53 +15,9 @@ import { AuditLogsService, AuditLogResponse, AuditLogFilters } from '../../../co
 import { EmptyStateComponent } from '../../../shared/empty-state/empty-state.component';
 import { PagedState } from '../../../core/admin/paged-state';
 import { DateFormatPipe } from '../../../shared/date-format.pipe';
+import { AUDIT_ACTION_COLORS, AUDIT_CRITICAL_EVENTS, auditBadgeClass } from '../../../shared/audit-log.constants';
 
-// Eventos com badge de alerta vermelho — indicam incidentes de segurança
-const CRITICAL_EVENTS = new Set([
-  'TOKEN_THEFT_DETECTED',
-  'ACCOUNT_LOCKED',
-  'LOGIN_FAILED',
-  'DEV_ELEVATION_COMPLETED',
-]);
-
-const ACTION_COLORS: Record<string, string> = {
-  USER_LOGGED_IN: 'bg-blue-950 text-blue-300',
-  USER_LOGGED_OUT: 'bg-blue-950 text-blue-400',
-  LOGIN_FAILED: 'bg-orange-950 text-orange-300',
-  ACCOUNT_LOCKED: 'bg-red-950 text-red-300',
-  TOKEN_THEFT_DETECTED: 'bg-red-950 text-red-200',
-  DEV_ELEVATION_COMPLETED: 'bg-amber-950 text-amber-300',
-  USER_SESSIONS_CLEARED: 'bg-orange-950 text-orange-300',
-  USER_REGISTERED: 'bg-green-950 text-green-300',
-  USER_CREATED: 'bg-green-950 text-green-300',
-  USER_DELETED: 'bg-red-950 text-red-400',
-  USER_UPDATED: 'bg-sky-950 text-sky-300',
-  USER_ENABLED: 'bg-green-950 text-green-400',
-  USER_DISABLED: 'bg-red-950 text-red-300',
-  USER_ROLE_ASSIGNED: 'bg-violet-950 text-violet-300',
-  USER_ROLE_REMOVED: 'bg-violet-950 text-violet-400',
-  USER_PASSWORD_CHANGED: 'bg-yellow-950 text-yellow-300',
-  USER_EMAIL_CHANGED: 'bg-yellow-950 text-yellow-300',
-  USER_EMAIL_VERIFIED: 'bg-green-950 text-green-300',
-  ROLE_CREATED: 'bg-violet-950 text-violet-300',
-  ROLE_DELETED: 'bg-red-950 text-red-300',
-  PERMISSION_CREATED: 'bg-emerald-950 text-emerald-300',
-  PERMISSION_DELETED: 'bg-red-950 text-red-300',
-  PERMISSION_ASSIGNED_TO_ROLE: 'bg-emerald-950 text-emerald-300',
-  PERMISSION_REMOVED_FROM_ROLE: 'bg-emerald-950 text-emerald-400',
-  TOTP_ENABLED: 'bg-teal-950 text-teal-300',
-  TOTP_DISABLED: 'bg-teal-950 text-teal-400',
-  TOTP_BACKUP_CODES_REGENERATED: 'bg-teal-950 text-teal-300',
-  TOTP_REPLACED: 'bg-teal-950 text-teal-300',
-  PASSWORD_RESET_REQUESTED: 'bg-yellow-950 text-yellow-300',
-  PASSWORD_RESET_COMPLETED: 'bg-green-950 text-green-300',
-  EMAIL_CHANGE_REQUESTED: 'bg-yellow-950 text-yellow-300',
-  EMAIL_CHANGE_CONFIRMED: 'bg-green-950 text-green-300',
-  OAUTH_GOOGLE_LOGIN: 'bg-blue-950 text-blue-300',
-  ACCESS_DENIED: 'bg-orange-950 text-orange-300',
-};
-
-const ALL_ACTIONS = Object.keys(ACTION_COLORS).sort();
+const ALL_ACTIONS = Object.keys(AUDIT_ACTION_COLORS).sort();
 
 @Component({
   selector: 'app-dev-logs',
@@ -253,11 +209,11 @@ export class DevLogsComponent implements OnInit {
   }
 
   isCritical(action: string): boolean {
-    return CRITICAL_EVENTS.has(action);
+    return AUDIT_CRITICAL_EVENTS.has(action);
   }
 
   badgeClass(action: string): string {
-    return ACTION_COLORS[action] ?? 'bg-[var(--surface-hover)] text-[var(--text-primary)]';
+    return auditBadgeClass(action);
   }
 
   exportCsv(): void {

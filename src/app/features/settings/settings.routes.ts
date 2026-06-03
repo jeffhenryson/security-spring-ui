@@ -71,6 +71,20 @@ export const settingsRoutes: Routes = [
         loadComponent: () =>
           import('./dev-system/dev-system.component').then((m) => m.DevSystemComponent),
       },
+      {
+        path: 'dev-users',
+        canMatch: [devElevationGuard],
+        data: { title: 'Usuários DEV' },
+        loadComponent: () =>
+          import('./dev-users/dev-users.component').then((m) => m.DevUsersComponent),
+      },
+      {
+        path: 'system-config',
+        canMatch: [devElevationGuard],
+        data: { title: 'Configuração do Sistema' },
+        loadComponent: () =>
+          import('./system-config/system-config.component').then((m) => m.SystemConfigComponent),
+      },
       { path: '**', redirectTo: 'profile' },
     ],
   },

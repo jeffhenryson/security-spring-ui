@@ -8,6 +8,8 @@ import {
   signal,
   computed,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { interval } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -92,15 +94,18 @@ import { AuthStore } from '../../../core/auth/auth.store';
               <strong>próximo código</strong> (novo ciclo de 30s).
             </p>
 
-            <!-- Timer do devToken -->
-            <div class="flex items-center gap-2 mb-4">
+            <!-- Countdown do código TOTP e expiração do devToken -->
+            <div class="flex items-center gap-2 mb-4 flex-wrap">
+              <div class="text-xs px-2 py-1 rounded-full border border-cyan-500/40 text-cyan-400 bg-cyan-500/10">
+                🔄 Próximo código em: {{ totpSecondsUntilChange() }}s
+              </div>
               <div
                 class="text-xs px-2 py-1 rounded-full border"
                 [class]="step2SecondsLeft() > 20
                   ? 'border-amber-500/40 text-amber-400 bg-amber-500/10'
                   : 'border-red-500/40 text-red-400 bg-red-500/10'"
               >
-                ⏱ {{ step2SecondsLeft() }}s para expirar
+                ⏱ Sessão expira em: {{ step2SecondsLeft() }}s
               </div>
             </div>
 
@@ -174,6 +179,12 @@ export class DevElevationModalComponent {
   readonly step2SecondsLeft = signal(90);
   readonly step2Expired = computed(() => this.step2SecondsLeft() <= 0);
 
+  private readonly _tick = toSignal(interval(1000), { initialValue: 0 });
+  readonly totpSecondsUntilChange = computed(() => {
+    this._tick();
+    return 30 - (Math.floor(Date.now() / 1000) % 30);
+  });
+
   private step2Timer: ReturnType<typeof setInterval> | null = null;
 
   onBackdropClick(): void {
@@ -187,7 +198,7 @@ export class DevElevationModalComponent {
     try {
       const res = await this.devService.firstCode(this.code1());
       this.devToken.set(res.devToken);
-      this.step2SecondsLeft.set(res.expiresIn);
+      this.step2SecondsLeft.set(Number.isFinite(res.expiresIn) ? res.expiresIn : 90);
       this.step.set('step2');
       this.startStep2Timer();
     } catch {
@@ -203,7 +214,7 @@ export class DevElevationModalComponent {
     this.error.set('');
     try {
       const res = await this.devService.complete(this.devToken(), this.code2());
-      this.store.setDevToken(res.accessToken, res.expiresIn);
+      this.store.setDevToken(res.accessToken, Number.isFinite(res.expiresIn) ? res.expiresIn : 3600);
       this.stopStep2Timer();
       this.elevated.emit();
     } catch {

@@ -356,6 +356,19 @@ export class TotpComponent {
       if (this.secretCopiedTimer !== null) clearTimeout(this.secretCopiedTimer);
       if (this.backupCopiedTimer !== null) clearTimeout(this.backupCopiedTimer);
     });
+    this.refreshTotpStatus();
+  }
+
+  private async refreshTotpStatus(): Promise<void> {
+    try {
+      const status = await this.securityService.loadTotpStatus();
+      const u = this.store.currentUser();
+      if (u) {
+        this.store.setCurrentUser({ ...u, totpEnabled: status.enabled, backupCodesRemaining: status.backupCodesRemaining });
+      }
+    } catch {
+      // silently ignore — store already has last known value
+    }
   }
 
   readonly totpEnabled = computed(() => this.store.currentUser()?.totpEnabled);

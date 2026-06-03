@@ -100,7 +100,7 @@ describe('UsersComponent', () => {
       roles: [],
       permissions: [],
     });
-    expect(component.displayedCols()).toEqual(['username', 'email', 'status', 'roles']);
+    expect(component.displayedCols()).toEqual(['username', 'email', 'status', 'roles', 'createdAt']);
   });
 
   it('adiciona coluna "actions" quando usuário tem permissão USER_UPDATE', () => {

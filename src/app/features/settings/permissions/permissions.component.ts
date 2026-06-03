@@ -129,8 +129,8 @@ export class PermissionsComponent {
   readonly submitting = signal(false);
   readonly allPermissions = signal<Permission[]>([]);
 
-  readonly canCreate = computed(() => this.store.hasPermission(PERMISSIONS.PERMISSION_CREATE));
-  readonly canDelete = computed(() => this.store.hasPermission(PERMISSIONS.PERMISSION_DELETE));
+  readonly canCreate = computed(() => this.store.hasPermission(PERMISSIONS.DEV_PERMISSION_MANAGE));
+  readonly canDelete = computed(() => this.store.hasPermission(PERMISSIONS.DEV_PERMISSION_MANAGE));
 
   readonly createForm = this.fb.nonNullable.group({ name: ['', Validators.required] });
   readonly searchControl = this.fb.control('');
