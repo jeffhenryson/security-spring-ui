@@ -9,6 +9,7 @@ import { authInterceptor } from './core/auth/auth.interceptor';
 import { devAuthInterceptor } from './core/http/dev-auth.interceptor';
 import { globalErrorInterceptor } from './core/http/global-error.interceptor';
 import { AuthService } from './core/auth/auth.service';
+import { AppConfigService } from './core/config/app-config.service';
 import { ThemeService } from './core/theme/theme.service';
 import { AppTitleStrategy } from './core/routing/title.strategy';
 import { PermissionPreloadStrategy } from './core/routing/permission-preload.strategy';
@@ -21,6 +22,10 @@ function initSession(authService: AuthService) {
 
 function initTheme(themeService: ThemeService) {
   return () => themeService.setTheme(themeService.theme());
+}
+
+function initAppConfig(configService: AppConfigService) {
+  return () => configService.loadPublic();
 }
 
 export const appConfig: ApplicationConfig = {
@@ -44,6 +49,12 @@ export const appConfig: ApplicationConfig = {
       provide: APP_INITIALIZER,
       useFactory: initTheme,
       deps: [ThemeService],
+      multi: true,
+    },
+    {
+      provide: APP_INITIALIZER,
+      useFactory: initAppConfig,
+      deps: [AppConfigService],
       multi: true,
     },
     // A8 — Snackbars de erro devem ser anunciados imediatamente por leitores de tela.

@@ -1,0 +1,53 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist/security-spring-ui/browser",
+  "installCommand": "npm ci",
+  "rewrites": [
+    {
+      "source": "/auth/:path*",
+      "destination": "http://BACKEND_IP:8080/auth/:path*"
+    },
+    {
+      "source": "/users/:path*",
+      "destination": "http://BACKEND_IP:8080/users/:path*"
+    },
+    {
+      "source": "/audit-logs/:path*",
+      "destination": "http://BACKEND_IP:8080/audit-logs/:path*"
+    },
+    {
+      "source": "/permissions/:path*",
+      "destination": "http://BACKEND_IP:8080/permissions/:path*"
+    },
+    {
+      "source": "/roles/:path*",
+      "destination": "http://BACKEND_IP:8080/roles/:path*"
+    },
+    {
+      "source": "/stats/:path*",
+      "destination": "http://BACKEND_IP:8080/stats/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)\\.(js|css|png|svg|ico|woff2?|ttf)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options",    "value": "nosniff" },
+        { "key": "X-Frame-Options",           "value": "DENY" },
+        { "key": "X-XSS-Protection",          "value": "1; mode=block" },
+        { "key": "Referrer-Policy",           "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy",        "value": "camera=(), microphone=(), geolocation=()" }
+      ]
+    }
+  ]
+}

@@ -3,5 +3,6 @@ export const environment = {
   apiUrl: '',
   // Set via CI/CD at build time
   googleClientId: '',
+  grafanaUrl: '',
   sentryDsn: '',
 };
