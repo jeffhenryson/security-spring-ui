@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterOutlet } from '@angular/router';
 import { trigger, transition, style, animate, query } from '@angular/animations';
 import { MatIconModule } from '@angular/material/icon';
@@ -27,7 +27,7 @@ import { AuthStore } from '../../core/auth/auth.store';
       <app-topbar />
       <app-dev-elevation-banner />
 
-      @if (showEmailBanner()) {
+      @if (showEmailBanner() && !emailBannerDismissed()) {
         <div class="flex items-center gap-2 px-4 py-1.5 text-xs shrink-0"
              style="background:#1c1917;color:#fcd34d;border-bottom:1px solid #44403c">
           <mat-icon class="!text-[14px] !w-[14px] !h-[14px]" style="color:#fbbf24">mail_outline</mat-icon>
@@ -38,9 +38,18 @@ import { AuthStore } from '../../core/auth/auth.store';
               Nenhum email cadastrado. Cadastre um email para recuperar o acesso à conta.
             }
           </span>
-          <a routerLink="/app/settings/profile" class="ml-auto underline" style="color:#fcd34d">
+          <a routerLink="/app/settings/profile" class="underline ml-4" style="color:#fcd34d">
             Configurar
           </a>
+          <button
+            type="button"
+            class="ml-1 flex items-center justify-center w-5 h-5 rounded opacity-70 hover:opacity-100 transition-opacity"
+            style="color:#fcd34d;background:transparent;border:none;cursor:pointer;flex-shrink:0"
+            aria-label="Fechar notificação"
+            (click)="emailBannerDismissed.set(true)"
+          >
+            <mat-icon class="!text-[14px] !w-[14px] !h-[14px]">close</mat-icon>
+          </button>
         </div>
       }
 
@@ -55,6 +64,8 @@ import { AuthStore } from '../../core/auth/auth.store';
 })
 export class ShellComponent {
   private readonly store = inject(AuthStore);
+
+  readonly emailBannerDismissed = signal(false);
 
   readonly showEmailBanner = computed(() => {
     const user = this.store.currentUser();
