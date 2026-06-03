@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { HttpErrorResponse } from '@angular/common/http';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -91,8 +92,11 @@ interface SystemStats {
             }
           </div>
         } @else {
-          <div class="bg-[var(--surface-color)] border border-red-500/30 rounded-xl p-4 text-sm text-red-400">
-            Erro ao carregar health check. Verifique se o backend está ativo.
+          <div class="bg-[var(--surface-color)] border border-red-500/30 rounded-xl p-4 text-sm text-red-400 flex items-center gap-2">
+            <mat-icon class="!text-[18px] shrink-0">{{ healthError() === 'forbidden' ? 'lock' : 'cloud_off' }}</mat-icon>
+            <span>{{ healthError() === 'forbidden'
+              ? 'Sem permissão para acessar o actuator. Verifique a configuração DEV_ELEVATED no backend.'
+              : 'Erro ao carregar health check. Verifique se o backend está ativo.' }}</span>
           </div>
         }
       </section>
@@ -253,6 +257,7 @@ export class DevSystemComponent implements OnInit {
   readonly healthLoading = signal(false);
   readonly statsLoading = signal(false);
   readonly health = signal<HealthStatus | null>(null);
+  readonly healthError = signal<'forbidden' | 'error' | null>(null);
   readonly stats = signal<SystemStats | null>(null);
   readonly healthUpdatedAt = signal('');
 
@@ -336,11 +341,15 @@ export class DevSystemComponent implements OnInit {
     try {
       const data = await this.devService.health();
       this.health.set(data);
+      this.healthError.set(null);
       this.healthUpdatedAt.set(
         new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
       );
-    } catch {
+    } catch (err) {
       this.health.set(null);
+      this.healthError.set(
+        err instanceof HttpErrorResponse && err.status === 403 ? 'forbidden' : 'error',
+      );
     } finally {
       this.healthLoading.set(false);
     }

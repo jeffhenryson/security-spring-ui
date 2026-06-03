@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import {
   MAT_DIALOG_DATA,
   MatDialogModule,
@@ -20,6 +20,7 @@ const DEV_ONLY_PERMISSIONS = new Set(['DEV_ROLE_MANAGE', 'DEV_PERMISSION_MANAGE'
 @Component({
   selector: 'app-manage-role-permissions-dialog',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     MatDialogModule,
     MatButtonModule,
@@ -38,9 +39,9 @@ const DEV_ONLY_PERMISSIONS = new Set(['DEV_ROLE_MANAGE', 'DEV_PERMISSION_MANAGE'
           <span class="text-[var(--text-muted)] text-sm">Nenhuma permissão</span>
         }
         @for (perm of role().permissions; track perm) {
-          <mat-chip [removable]="canManage()" (removed)="removePerm(perm)">
+          <mat-chip [removable]="canRemove(perm)" (removed)="removePerm(perm)">
             {{ perm }}
-            @if (canManage()) {
+            @if (canRemove(perm)) {
               <button matChipRemove><mat-icon>cancel</mat-icon></button>
             }
           </mat-chip>
@@ -94,6 +95,12 @@ export class ManageRolePermissionsDialogComponent {
     return this.canManageDev() ? base : base.filter((p) => !DEV_ONLY_PERMISSIONS.has(p));
   });
 
+  canRemove(perm: string): boolean {
+    if (!this.canManage()) return false;
+    if (DEV_ONLY_PERMISSIONS.has(perm) && !this.canManageDev()) return false;
+    return true;
+  }
+
   async addPerm(): Promise<void> {
     const perm = this.selectedPerm();
     if (!perm) return;
@@ -111,6 +118,7 @@ export class ManageRolePermissionsDialogComponent {
   }
 
   async removePerm(perm: string): Promise<void> {
+    if (!this.canRemove(perm)) return;
     try {
       await this.rolesService.removePermission(this.role().name, perm);
       this.role.update((r) => ({ ...r, permissions: r.permissions.filter((p) => p !== perm) }));

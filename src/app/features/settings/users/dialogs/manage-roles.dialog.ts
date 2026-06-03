@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import {
   MAT_DIALOG_DATA,
   MatDialogModule,
@@ -18,6 +18,7 @@ import { PERMISSIONS, ROLES } from '../../../../core/rbac/permissions.constants'
 @Component({
   selector: 'app-manage-roles-dialog',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     MatDialogModule,
     MatButtonModule,

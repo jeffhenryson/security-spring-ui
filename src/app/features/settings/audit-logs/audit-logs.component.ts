@@ -15,7 +15,7 @@ import { AuditLogsService, AuditLogResponse, AuditLogFilters } from '../../../co
 import { EmptyStateComponent } from '../../../shared/empty-state/empty-state.component';
 import { PagedState } from '../../../core/admin/paged-state';
 import { DateFormatPipe } from '../../../shared/date-format.pipe';
-import { AUDIT_ACTION_COLORS, AUDIT_DEV_ONLY_EVENTS, auditBadgeClass } from '../../../shared/audit-log.constants';
+import { AUDIT_ACTION_COLORS, auditBadgeClass } from '../../../shared/audit-log.constants';
 
 const KNOWN_ACTIONS = Object.keys(AUDIT_ACTION_COLORS)
   .filter((a) => !AUDIT_DEV_ONLY_EVENTS.has(a))
@@ -194,11 +194,10 @@ export class AuditLogsComponent implements OnInit {
     const filters: AuditLogFilters = {
       action: this.actionControl.value?.trim() || undefined,
       userId: this.userIdControl.value?.trim() || undefined,
+      excludeDevEvents: true,
     };
     try {
       const res = await this.auditLogsService.list(this.paged.page(), this.paged.size(), filters);
-      // Remove eventos exclusivos da área DEV — ADMIN não deve visualizá-los.
-      res.content = res.content.filter((l) => !AUDIT_DEV_ONLY_EVENTS.has(l.action));
       this.paged.apply(res);
     } catch {
       this.snackBar.open('Erro ao carregar logs de auditoria.', 'OK', { duration: 3000 });

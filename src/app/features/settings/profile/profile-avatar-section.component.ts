@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, ViewChild, computed, effect, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, effect, inject, input, signal, viewChild } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -63,7 +63,7 @@ import { ProfileService } from '../../../core/profile/profile.service';
   `,
 })
 export class ProfileAvatarSectionComponent {
-  @ViewChild('fileInput') private readonly fileInput!: ElementRef<HTMLInputElement>;
+  private readonly fileInput = viewChild.required<ElementRef<HTMLInputElement>>('fileInput');
 
   private readonly avatarService = inject(AvatarService);
   private readonly profileService = inject(ProfileService);

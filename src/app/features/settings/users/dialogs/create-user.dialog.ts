@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   MAT_DIALOG_DATA,
@@ -56,16 +56,16 @@ import { PasswordStrengthComponent } from '../../../../shared/password-strength/
           <mat-label>Senha</mat-label>
           <input
             matInput
-            [type]="showPassword ? 'text' : 'password'"
+            [type]="showPassword() ? 'text' : 'password'"
             formControlName="password"
             autocomplete="new-password"
           />
           <button mat-icon-button matSuffix type="button"
-                  (mousedown)="showPassword = true"
-                  (mouseup)="showPassword = false"
-                  (mouseleave)="showPassword = false"
+                  (mousedown)="showPassword.set(true)"
+                  (mouseup)="showPassword.set(false)"
+                  (mouseleave)="showPassword.set(false)"
                   aria-label="Mostrar senha">
-            <mat-icon class="!text-[18px]">{{ showPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+            <mat-icon class="!text-[18px]">{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
           </button>
           @if (
             (form.get('password')?.hasError('minlength') || form.get('password')?.hasError('passwordPolicy')) &&
@@ -100,7 +100,7 @@ export class CreateUserDialogComponent {
   readonly data: { availableRoles: string[] } = inject(MAT_DIALOG_DATA);
   private readonly fb = inject(FormBuilder);
 
-  showPassword = false;
+  readonly showPassword = signal(false);
 
   readonly form = this.fb.nonNullable.group({
     username: ['', Validators.required],

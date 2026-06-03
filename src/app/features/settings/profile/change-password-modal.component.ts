@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -14,7 +15,7 @@ export interface PasswordConfirmData {
   selector: 'app-change-password-modal',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatProgressSpinnerModule],
+  imports: [ReactiveFormsModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatInputModule, MatProgressSpinnerModule],
   template: `
     <div
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
@@ -45,17 +46,13 @@ export interface PasswordConfirmData {
           </mat-form-field>
         }
 
-        <label class="flex items-center gap-3 cursor-pointer mt-2 mb-4">
-          <input
-            type="checkbox"
-            class="w-4 h-4 accent-[var(--active-color)] cursor-pointer"
-            [checked]="revokeOtherSessions()"
-            (change)="revokeOtherSessions.set($any($event.target).checked)"
-          />
-          <span class="text-sm text-[var(--text-primary)]">
-            Encerrar sessão em outros dispositivos
-          </span>
-        </label>
+        <mat-checkbox
+          class="mt-2 mb-4"
+          [checked]="revokeOtherSessions()"
+          (change)="revokeOtherSessions.set($event.checked)"
+        >
+          <span class="text-sm text-[var(--text-primary)]">Encerrar sessão em outros dispositivos</span>
+        </mat-checkbox>
 
         @if (error()) {
           <p class="text-red-400 text-sm mb-3">{{ error() }}</p>

@@ -2,9 +2,8 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
-  EventEmitter,
-  Output,
   inject,
+  output,
   signal,
   computed,
 } from '@angular/core';
@@ -163,8 +162,8 @@ import { AuthStore } from '../../../core/auth/auth.store';
   `,
 })
 export class DevElevationModalComponent {
-  @Output() dismissed = new EventEmitter<void>();
-  @Output() elevated = new EventEmitter<void>();
+  readonly dismissed = output<void>();
+  readonly elevated = output<void>();
 
   private readonly devService = inject(DevService);
   private readonly store = inject(AuthStore);

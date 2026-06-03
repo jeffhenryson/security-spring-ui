@@ -4,8 +4,8 @@ import {
   computed,
   inject,
 } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { interval } from 'rxjs';
+import { toSignal, toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { interval, switchMap, EMPTY } from 'rxjs';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
@@ -49,7 +49,13 @@ const DEV_TTL_SECONDS = 3600;
 export class DevElevationBannerComponent {
   private readonly store = inject(AuthStore);
 
-  private readonly _tick = toSignal(interval(1000), { initialValue: 0 });
+  private readonly _tick = toSignal(
+    toObservable(this.store.isDevElevated).pipe(
+      switchMap(elevated => elevated ? interval(1000) : EMPTY),
+      takeUntilDestroyed(),
+    ),
+    { initialValue: 0 },
+  );
 
   readonly isDevElevated = computed(() => this.store.isDevElevated());
 

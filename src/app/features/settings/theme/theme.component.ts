@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { ThemeService, Theme } from '../../../core/theme/theme.service';
 
 interface ThemeOption {
@@ -36,7 +35,7 @@ const THEME_OPTIONS: ThemeOption[] = [
   selector: 'app-theme-settings',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatIconModule, MatButtonModule, MatCardModule],
+  imports: [MatIconModule, MatButtonModule],
   template: `
     <div class="p-6 max-w-2xl">
       <h2 class="text-lg font-semibold text-primary mb-1">Tema</h2>
