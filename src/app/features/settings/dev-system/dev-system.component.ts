@@ -25,8 +25,11 @@ interface SystemStats {
     <div class="p-6 max-w-3xl mx-auto flex flex-col gap-6">
       <div class="flex items-center gap-2">
         <h3 class="text-base font-semibold text-[var(--text-primary)] m-0">Sistema</h3>
-        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
-          DEV
+        <span
+          class="px-2 py-0.5 rounded text-[10px] font-bold border"
+          [class]="profileBadgeClass()"
+        >
+          {{ profileBadgeLabel() }}
         </span>
         <button
           mat-icon-button
@@ -255,6 +258,19 @@ export class DevSystemComponent implements OnInit {
 
   readonly apiUrl = this.config.rootUrl;
   readonly activeProfile = signal('carregando...');
+
+  readonly profileBadgeLabel = computed(() => {
+    const p = this.activeProfile();
+    if (p === 'carregando...') return 'DEV';
+    return p.toUpperCase();
+  });
+
+  readonly profileBadgeClass = computed(() => {
+    const p = this.activeProfile().toLowerCase();
+    if (p === 'prod' || p === 'production') return 'bg-red-500/15 text-red-400 border-red-500/30';
+    if (p === 'hml' || p === 'homologacao' || p === 'staging') return 'bg-blue-500/15 text-blue-400 border-blue-500/30';
+    return 'bg-amber-500/15 text-amber-400 border-amber-500/30';
+  });
   readonly swaggerUrl = computed(() => `${this.config.rootUrl}/swagger-ui/index.html`);
 
   readonly grafanaUrl = signal(environment.grafanaUrl ?? '');
