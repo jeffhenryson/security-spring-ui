@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { CommonModule } from '@angular/common';
 
 interface StrengthRule {
   label: string;
@@ -18,7 +17,7 @@ const RULES: StrengthRule[] = [
   selector: 'app-password-strength',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule],
+  imports: [],
   template: `
     @if (pw()) {
       <div class="mt-2 flex flex-col gap-1.5">

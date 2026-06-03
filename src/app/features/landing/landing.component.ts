@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { AppConfigStore } from '../../core/config/app-config.store';
 
 interface Feature {
   icon: string;
@@ -78,14 +79,12 @@ const TECH_BADGES: TechBadge[] = [
         <div class="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <span class="text-cyan-400 font-semibold tracking-wider text-sm">SecuritySpring</span>
           <div class="flex items-center gap-2">
-            <a
-              routerLink="/auth/login"
-              mat-stroked-button
-              class="!text-slate-300 !border-slate-700 !text-sm"
-            >
+            <a routerLink="/auth/login" mat-stroked-button class="!text-slate-300 !border-slate-700 !text-sm">
               Entrar
             </a>
-            <a routerLink="/auth/register" mat-flat-button class="!text-sm"> Criar conta </a>
+            @if (registrationEnabled()) {
+              <a routerLink="/auth/register" mat-flat-button class="!text-sm">Criar conta</a>
+            }
           </div>
         </div>
       </header>
@@ -125,14 +124,13 @@ const TECH_BADGES: TechBadge[] = [
               <mat-icon class="mr-2">login</mat-icon>
               Acessar plataforma
             </a>
-            <a
-              routerLink="/auth/register"
-              mat-stroked-button
-              class="!px-8 !py-3 !text-base !h-auto !text-slate-300 !border-slate-600"
-            >
-              <mat-icon class="mr-2">person_add</mat-icon>
-              Criar conta
-            </a>
+            @if (registrationEnabled()) {
+              <a routerLink="/auth/register" mat-stroked-button
+                 class="!px-8 !py-3 !text-base !h-auto !text-slate-300 !border-slate-600">
+                <mat-icon class="mr-2">person_add</mat-icon>
+                Criar conta
+              </a>
+            }
           </div>
         </div>
       </section>
@@ -191,15 +189,14 @@ const TECH_BADGES: TechBadge[] = [
             Crie sua conta gratuitamente e explore todos os recursos da plataforma.
           </p>
           <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <a routerLink="/auth/register" mat-flat-button class="!px-8 !py-3 !text-base !h-auto">
-              Criar conta gratuita
-            </a>
-            <a
-              routerLink="/auth/login"
-              mat-stroked-button
-              class="!px-8 !py-3 !text-base !h-auto !text-slate-300 !border-slate-600"
-            >
-              Já tenho uma conta
+            @if (registrationEnabled()) {
+              <a routerLink="/auth/register" mat-flat-button class="!px-8 !py-3 !text-base !h-auto">
+                Criar conta gratuita
+              </a>
+            }
+            <a routerLink="/auth/login" mat-stroked-button
+               class="!px-8 !py-3 !text-base !h-auto !text-slate-300 !border-slate-600">
+              {{ registrationEnabled() ? 'Já tenho uma conta' : 'Entrar' }}
             </a>
           </div>
         </div>
@@ -215,6 +212,9 @@ const TECH_BADGES: TechBadge[] = [
   `,
 })
 export class LandingComponent {
+  private readonly appConfig = inject(AppConfigStore);
+
   readonly features = FEATURES;
   readonly badges = TECH_BADGES;
+  readonly registrationEnabled = this.appConfig.registrationEnabled;
 }
