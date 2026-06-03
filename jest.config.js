@@ -7,5 +7,14 @@ module.exports = {
     'src/app/**/*.ts',
     '!src/app/**/*.routes.ts',
     '!src/app/**/*.html',
+    '!src/app/api/**/*.ts',
   ],
+  coverageThreshold: {
+    global: {
+      branches: 70,
+      functions: 70,
+      lines: 70,
+      statements: 70,
+    },
+  },
 };

@@ -36,6 +36,9 @@ export async function mockLogin(page: Page): Promise<void> {
   await page.route(`${API}/users/me`, (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_USER) }),
   );
+  await page.route(`${API}/auth/2fa/status`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ enabled: false, backupCodesRemaining: 0 }) }),
+  );
 }
 
 export async function mockLoginAs2FA(page: Page, challengeToken: string): Promise<void> {
@@ -55,6 +58,9 @@ export async function mock2FAVerify(page: Page): Promise<void> {
   await page.route(`${API}/users/me`, (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_USER) }),
   );
+  await page.route(`${API}/auth/2fa/status`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ enabled: false, backupCodesRemaining: 0 }) }),
+  );
 }
 
 // ── auth direta (sem login via UI) ────────────────────────────────────────
@@ -70,6 +76,9 @@ export async function setupDirectAuth(page: Page): Promise<void> {
 
   await page.route(`${API}/auth/refresh`, (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_TOKEN_PAIR) }),
+  );
+  await page.route(`${API}/auth/2fa/status`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ enabled: false, backupCodesRemaining: 0 }) }),
   );
   // Re-registra por último para ter prioridade sobre mocks mais genéricos (Playwright LIFO)
   await page.route(`${API}/users/me`, (route) =>

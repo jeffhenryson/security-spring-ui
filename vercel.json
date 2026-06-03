@@ -5,27 +5,27 @@
   "rewrites": [
     {
       "source": "/auth/:path*",
-      "destination": "http://BACKEND_IP:8080/auth/:path*"
+      "destination": "$BACKEND_URL/auth/:path*"
     },
     {
       "source": "/users/:path*",
-      "destination": "http://BACKEND_IP:8080/users/:path*"
+      "destination": "$BACKEND_URL/users/:path*"
     },
     {
       "source": "/audit-logs/:path*",
-      "destination": "http://BACKEND_IP:8080/audit-logs/:path*"
+      "destination": "$BACKEND_URL/audit-logs/:path*"
     },
     {
       "source": "/permissions/:path*",
-      "destination": "http://BACKEND_IP:8080/permissions/:path*"
+      "destination": "$BACKEND_URL/permissions/:path*"
     },
     {
       "source": "/roles/:path*",
-      "destination": "http://BACKEND_IP:8080/roles/:path*"
+      "destination": "$BACKEND_URL/roles/:path*"
     },
     {
       "source": "/stats/:path*",
-      "destination": "http://BACKEND_IP:8080/stats/:path*"
+      "destination": "$BACKEND_URL/stats/:path*"
     },
     {
       "source": "/(.*)",
