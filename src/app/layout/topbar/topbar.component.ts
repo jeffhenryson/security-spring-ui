@@ -3,8 +3,8 @@ import { Router, NavigationEnd, ActivatedRoute, RouterLink } from '@angular/rout
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
-import { toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { filter, map, startWith, interval } from 'rxjs';
+import { toSignal, takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { filter, map, startWith, interval, switchMap, EMPTY } from 'rxjs';
 import { AuthStore } from '../../core/auth/auth.store';
 import { AuthService } from '../../core/auth/auth.service';
 import { ThemeService, Theme } from '../../core/theme/theme.service';
@@ -44,13 +44,8 @@ import { ThemeService, Theme } from '../../core/theme/theme.service';
       width: 18px; height: 18px;
       display: block;
       flex-shrink: 0;
-    }
-    .hdr-icon-img {
-      width: 18px; height: 18px;
-      display: block;
-      flex-shrink: 0;
-      object-fit: contain;
-      border-radius: 2px;
+      font-size: 18px !important;
+      line-height: 18px !important;
     }
   `],
   template: `
@@ -98,18 +93,10 @@ import { ThemeService, Theme } from '../../core/theme/theme.service';
       >
         @switch (currentTheme()) {
           @case ('dark') {
-            <img
-              src="https://i.ibb.co/jP2BxxGv/moon-svgrepo-com.jpg"
-              class="hdr-icon-img"
-              alt="Tema escuro"
-            />
+            <mat-icon class="hdr-icon-svg">dark_mode</mat-icon>
           }
           @case ('light') {
-            <img
-              src="https://i.ibb.co/RkS54gJ7/light-mode-svgrepo-com.jpg"
-              class="hdr-icon-img"
-              alt="Tema claro"
-            />
+            <mat-icon class="hdr-icon-svg">light_mode</mat-icon>
           }
           @default {
             <svg class="hdr-icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" fill="currentColor">
@@ -130,11 +117,7 @@ import { ThemeService, Theme } from '../../core/theme/theme.service';
         @if (loggingOut()) {
           <mat-spinner diameter="14" />
         } @else {
-          <img
-            src="https://i.ibb.co/B27M3nvr/logout-svgrepo-com.jpg"
-            class="hdr-icon-img"
-            alt="Sair"
-          />
+          <mat-icon class="hdr-icon-svg">logout</mat-icon>
         }
       </button>
     </header>
@@ -160,7 +143,13 @@ export class TopbarComponent {
     { initialValue: '' },
   );
 
-  private readonly _tick = toSignal(interval(1000).pipe(takeUntilDestroyed()), { initialValue: 0 });
+  private readonly _tick = toSignal(
+    toObservable(this.store.isDevElevated).pipe(
+      switchMap(elevated => elevated ? interval(1000) : EMPTY),
+      takeUntilDestroyed(),
+    ),
+    { initialValue: 0 },
+  );
 
   readonly loggingOut = signal(false);
   readonly hasPendingEmail = computed(() => this.store.hasPendingEmail());

@@ -1,34 +1,38 @@
 import { TestBed } from '@angular/core/testing';
 import { Router, NavigationEnd, ActivatedRoute } from '@angular/router';
+import { signal } from '@angular/core';
 import { Subject } from 'rxjs';
 import { SettingsShellComponent } from './settings-shell.component';
 import { AuthStore } from '../../../core/auth/auth.store';
 
 function makeRouter() {
-  return { events: new Subject<NavigationEnd>().asObservable(), navigate: jest.fn() } as unknown as Router;
+  return {
+    events: new Subject<NavigationEnd>().asObservable(),
+    navigate: jest.fn(),
+    navigateByUrl: jest.fn(),
+  } as unknown as Router;
 }
 
-function makeActivatedRoute() {
+function makeActivatedRoute(params: Record<string, string | null> = {}) {
   return {
     firstChild: null,
     snapshot: {
       data: {},
-      queryParamMap: { get: jest.fn(() => null) },
+      queryParamMap: { get: (key: string) => params[key] ?? null },
     },
   } as unknown as ActivatedRoute;
 }
 
-function makeStore(roles: string[] = [], elevated = false) {
+function makeStore(roles: string[] = [], elevated = false, totpEnabled = false) {
   const isAdmin = roles.some((r) => r === 'ADMIN' || r === 'ROLE_ADMIN');
-  const perms = isAdmin
-    ? ['USER_READ', 'ROLE_READ', 'AUDIT_READ']
-    : [];
+  const perms = isAdmin ? ['USER_READ', 'ROLE_READ', 'AUDIT_READ'] : [];
   return {
     hasRole: jest.fn((role: string) => roles.includes(role)),
     hasPermission: jest.fn(() => isAdmin),
     permissions: jest.fn(() => perms),
-    isDevElevated: jest.fn(() => elevated),
-    devTokenExpiresAt: jest.fn(() => 0),
+    isDevElevated: signal(elevated),
+    devTokenExpiresAt: signal(0),
+    currentUser: signal(totpEnabled ? { totpEnabled: true } : null),
     clearDevToken: jest.fn(),
   } as unknown as AuthStore;
 }
@@ -36,19 +40,25 @@ function makeStore(roles: string[] = [], elevated = false) {
 describe('SettingsShellComponent', () => {
   let component: SettingsShellComponent;
 
-  function setup(roles: string[] = [], elevated = false) {
+  function setup(
+    roles: string[] = [],
+    elevated = false,
+    routeParams: Record<string, string | null> = {},
+    totpEnabled = false,
+  ) {
+    const router = makeRouter();
     TestBed.configureTestingModule({
       imports: [SettingsShellComponent],
       providers: [
-        { provide: AuthStore, useValue: makeStore(roles, elevated) },
-        { provide: Router, useValue: makeRouter() },
-        { provide: ActivatedRoute, useValue: makeActivatedRoute() },
+        { provide: AuthStore, useValue: makeStore(roles, elevated, totpEnabled) },
+        { provide: Router, useValue: router },
+        { provide: ActivatedRoute, useValue: makeActivatedRoute(routeParams) },
       ],
     }).overrideTemplate(SettingsShellComponent, '');
     const fixture = TestBed.createComponent(SettingsShellComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
-    return fixture;
+    return { fixture, router };
   }
 
   it('cria o componente', () => {
@@ -70,9 +80,8 @@ describe('SettingsShellComponent', () => {
   describe('visibleSections', () => {
     it('sem roles admin: exibe apenas seção "Conta"', () => {
       setup([]);
-      const sections = component.visibleSections();
-      expect(sections).toHaveLength(1);
-      expect(sections[0].title).toBe('Conta');
+      expect(component.visibleSections()).toHaveLength(1);
+      expect(component.visibleSections()[0].title).toBe('Conta');
     });
 
     it('com role ADMIN: exibe "Conta" + "Administração"', () => {
@@ -84,8 +93,7 @@ describe('SettingsShellComponent', () => {
 
     it('com role ROLE_ADMIN: exibe "Conta" + "Administração"', () => {
       setup(['ROLE_ADMIN']);
-      const sections = component.visibleSections();
-      expect(sections).toHaveLength(2);
+      expect(component.visibleSections()).toHaveLength(2);
     });
 
     it('seção "Conta" tem 3 itens (perfil, segurança, tema)', () => {
@@ -101,8 +109,41 @@ describe('SettingsShellComponent', () => {
 
     it('seção "Desenvolvedor" não aparece sem elevação ativa', () => {
       setup(['ROLE_DEV'], false);
-      const devSection = component.visibleSections().find((s) => s.title === 'Desenvolvedor');
-      expect(devSection).toBeUndefined();
+      expect(component.visibleSections().find((s) => s.title === 'Desenvolvedor')).toBeUndefined();
+    });
+  });
+
+  describe('fluxo devRequired', () => {
+    it('abre modal quando devRequired=true, não elevado e usuário tem 2FA', () => {
+      setup([], false, { devRequired: 'true', returnUrl: '/app/settings/dev-system' }, true);
+      expect(component.showElevationModal()).toBe(true);
+    });
+
+    it('não abre modal quando devRequired=true mas já está elevado', () => {
+      setup([], true, { devRequired: 'true', returnUrl: '/app/settings/dev-system' }, true);
+      expect(component.showElevationModal()).toBe(false);
+    });
+
+    it('onElevated() navega ao returnUrl pendente e fecha modal', () => {
+      const { router } = setup([], false, { devRequired: 'true', returnUrl: '/app/settings/dev-system' }, true);
+      component.onElevated();
+      expect(component.showElevationModal()).toBe(false);
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/app/settings/dev-system');
+    });
+
+    it('onElevated() sem returnUrl pendente apenas fecha modal', () => {
+      const { router } = setup([], false, {});
+      component.showElevationModal.set(true);
+      component.onElevated();
+      expect(component.showElevationModal()).toBe(false);
+      expect(router.navigateByUrl).not.toHaveBeenCalled();
+    });
+
+    it('onElevated() consome returnUrl uma única vez', () => {
+      const { router } = setup([], false, { returnUrl: '/app/settings/dev-system' }, true);
+      component.onElevated();
+      component.onElevated();
+      expect(router.navigateByUrl).toHaveBeenCalledTimes(1);
     });
   });
 });

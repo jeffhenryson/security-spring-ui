@@ -5,7 +5,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthStore } from '../../core/auth/auth.store';
 import { AvatarService } from '../../core/auth/avatar.service';
-import { ROLES } from '../../core/rbac/permissions.constants';
+import { PERMISSIONS, ROLES } from '../../core/rbac/permissions.constants';
+import { HasPermissionDirective } from '../../core/rbac/has-permission.directive';
 
 interface ModuleItem {
   label: string;
@@ -23,7 +24,7 @@ const SIDEBAR_COLLAPSE_KEY = 'ss_sidebar_collapsed';
   selector: 'app-sidebar',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, RouterLinkActive, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [RouterLink, RouterLinkActive, MatIconModule, MatButtonModule, MatTooltipModule, HasPermissionDirective],
   template: `
     <aside
       class="flex flex-col h-full sidebar-bg border-r sidebar-border overflow-hidden shrink-0"
@@ -67,23 +68,25 @@ const SIDEBAR_COLLAPSE_KEY = 'ss_sidebar_collapsed';
           }
         </a>
 
-        <!-- Template -->
-        <a
-          routerLink="/app/template"
-          routerLinkActive="nav-active"
-          [matTooltip]="collapsed() ? 'Template' : ''"
-          matTooltipPosition="right"
-          class="nav-item flex items-center gap-3 px-3 py-2.5 mx-2 my-0.5 rounded-lg
-                  nav-text no-underline hover:nav-text-hover hover:nav-hover-bg
-                  transition-colors duration-150"
-        >
-          <mat-icon class="shrink-0 !text-[20px] !w-5 !h-5 !leading-5"
-            >dashboard_customize</mat-icon
+        <!-- Template — visível apenas para quem tem DEV_ROLE_MANAGE -->
+        <ng-template [hasPermission]="PERMISSIONS.DEV_ROLE_MANAGE">
+          <a
+            routerLink="/app/template"
+            routerLinkActive="nav-active"
+            [matTooltip]="collapsed() ? 'Template' : ''"
+            matTooltipPosition="right"
+            class="nav-item flex items-center gap-3 px-3 py-2.5 mx-2 my-0.5 rounded-lg
+                    nav-text no-underline hover:nav-text-hover hover:nav-hover-bg
+                    transition-colors duration-150"
           >
-          @if (!collapsed()) {
-            <span class="text-sm truncate">Template</span>
-          }
-        </a>
+            <mat-icon class="shrink-0 !text-[20px] !w-5 !h-5 !leading-5"
+              >dashboard_customize</mat-icon
+            >
+            @if (!collapsed()) {
+              <span class="text-sm truncate">Template</span>
+            }
+          </a>
+        </ng-template>
 
         <!-- Module items — adicionar entradas ao array MODULES conforme o sistema cresce -->
         @if (canSeeModules() && MODULES.length > 0) {
@@ -219,6 +222,7 @@ export class SidebarComponent {
   private readonly avatarService = inject(AvatarService);
 
   readonly MODULES = MODULES;
+  readonly PERMISSIONS = PERMISSIONS;
   readonly collapsed = signal(localStorage.getItem(SIDEBAR_COLLAPSE_KEY) === '1');
   readonly canSeeModules = computed(() => this.store.hasRole(ROLES.ROLE_ADMIN));
 

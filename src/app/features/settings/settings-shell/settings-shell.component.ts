@@ -4,6 +4,7 @@ import {
   computed,
   signal,
   ChangeDetectionStrategy,
+  afterNextRender,
 } from '@angular/core';
 import {
   RouterLink,
@@ -13,9 +14,9 @@ import {
   NavigationEnd,
   ActivatedRoute,
 } from '@angular/router';
-import { interval } from 'rxjs';
-import { toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { filter, map, startWith } from 'rxjs';
+import { interval, switchMap, EMPTY } from 'rxjs';
+import { toSignal, takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { filter, map, startWith, take } from 'rxjs';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -233,12 +234,28 @@ export class SettingsShellComponent {
 
   readonly mobileOpen = signal(false);
   readonly showElevationModal = signal(false);
+  private readonly pendingReturnUrl = signal<string | null>(null);
+
+  constructor() {
+    const qp = this.activatedRoute.snapshot.queryParamMap;
+    const devRequired = qp.get('devRequired') === 'true';
+    const returnUrl = qp.get('returnUrl') ?? '';
+    if (returnUrl) this.pendingReturnUrl.set(returnUrl);
+    if (devRequired && !this.store.isDevElevated()) {
+      afterNextRender(() => this.tryElevate());
+    }
+  }
 
   readonly isRoleDev = computed(() => this.store.hasRole(ROLES.ROLE_DEV));
   readonly isDevElevated = computed(() => this.store.isDevElevated());
 
-  // Tick a cada segundo para atualizar o contador DEV — sem effect(), sem setInterval manual.
-  private readonly _tick = toSignal(interval(1000).pipe(takeUntilDestroyed()), { initialValue: 0 });
+  private readonly _tick = toSignal(
+    toObservable(this.store.isDevElevated).pipe(
+      switchMap(elevated => elevated ? interval(1000) : EMPTY),
+      takeUntilDestroyed(),
+    ),
+    { initialValue: 0 },
+  );
 
   readonly devMinutesLeft = computed(() => {
     this._tick(); // garante reavaliação a cada segundo
@@ -292,7 +309,7 @@ export class SettingsShellComponent {
         'Configurar agora',
         { duration: 6000 },
       );
-      ref.onAction().subscribe(() => this.router.navigate(['/app/settings/security']));
+      ref.onAction().pipe(take(1)).subscribe(() => this.router.navigate(['/app/settings/security']));
       return;
     }
     this.showElevationModal.set(true);
@@ -300,6 +317,11 @@ export class SettingsShellComponent {
 
   onElevated(): void {
     this.showElevationModal.set(false);
+    const dest = this.pendingReturnUrl();
+    if (dest) {
+      this.pendingReturnUrl.set(null);
+      this.router.navigateByUrl(dest);
+    }
   }
 
   revokeDevAccess(): void {

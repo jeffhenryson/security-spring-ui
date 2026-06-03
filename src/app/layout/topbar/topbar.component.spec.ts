@@ -43,21 +43,17 @@ function buildTestBed(initialTheme: Theme) {
 describe('TopbarComponent', () => {
   beforeEach(() => TestBed.resetTestingModule());
 
-  // ── themeIconUri ──────────────────────────────────────────────────────────
+  // ── currentTheme ─────────────────────────────────────────────────────────
 
-  it('themeIconUri retorna URI SVG para dark', () => {
+  it('currentTheme reflete o tema do ThemeService', () => {
     const { component } = buildTestBed('dark');
-    expect(component.themeIconUri()).toMatch(/^url\("data:image\/svg\+xml,/);
+    expect(component.currentTheme()).toBe('dark');
   });
 
-  it('themeIconUri retorna URI SVG para light', () => {
-    const { component } = buildTestBed('light');
-    expect(component.themeIconUri()).toMatch(/^url\("data:image\/svg\+xml,/);
-  });
-
-  it('themeIconUri retorna URI SVG para system', () => {
-    const { component } = buildTestBed('system');
-    expect(component.themeIconUri()).toMatch(/^url\("data:image\/svg\+xml,/);
+  it('currentTheme muda quando ThemeService atualiza', () => {
+    const { component, themeService } = buildTestBed('dark');
+    themeService.setTheme('light');
+    expect(component.currentTheme()).toBe('light');
   });
 
   // ── themeTooltip ──────────────────────────────────────────────────────────

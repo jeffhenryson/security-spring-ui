@@ -1,7 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { RouterLink, RouterOutlet } from '@angular/router';
+import { RouterLink, RouterOutlet, Router, NavigationStart, NavigationEnd, NavigationCancel, NavigationError } from '@angular/router';
 import { trigger, transition, style, animate, query } from '@angular/animations';
+import { toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { filter, map } from 'rxjs';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { SidebarComponent } from '../sidebar/sidebar.component';
 import { TopbarComponent } from '../topbar/topbar.component';
 import { DevElevationBannerComponent } from '../../features/settings/dev-elevation/dev-elevation-banner.component';
@@ -11,7 +14,7 @@ import { AuthStore } from '../../core/auth/auth.store';
   selector: 'app-shell',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, RouterLink, SidebarComponent, TopbarComponent, DevElevationBannerComponent, MatIconModule],
+  imports: [RouterOutlet, RouterLink, SidebarComponent, TopbarComponent, DevElevationBannerComponent, MatIconModule, MatProgressBarModule],
   animations: [
     trigger('routeAnimations', [
       transition('* <=> *', [
@@ -26,6 +29,10 @@ import { AuthStore } from '../../core/auth/auth.store';
     <div class="flex flex-col h-screen overflow-hidden">
       <app-topbar />
       <app-dev-elevation-banner />
+
+      @if (navigating()) {
+        <mat-progress-bar mode="indeterminate" class="shrink-0" />
+      }
 
       @if (showEmailBanner() && !emailBannerDismissed()) {
         <div class="flex items-center gap-2 px-4 py-1.5 text-xs shrink-0"
@@ -66,6 +73,16 @@ export class ShellComponent {
   private readonly store = inject(AuthStore);
 
   readonly emailBannerDismissed = signal(false);
+
+  readonly navigating = toSignal(
+    inject(Router).events.pipe(
+      filter(e => e instanceof NavigationStart || e instanceof NavigationEnd ||
+                  e instanceof NavigationCancel || e instanceof NavigationError),
+      map(e => e instanceof NavigationStart),
+      takeUntilDestroyed(),
+    ),
+    { initialValue: false },
+  );
 
   readonly showEmailBanner = computed(() => {
     const user = this.store.currentUser();
