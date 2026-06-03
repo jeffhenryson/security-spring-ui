@@ -12,10 +12,15 @@ export const globalErrorInterceptor: HttpInterceptorFn = (req, next) => {
     catchError((err: unknown) => {
       if (err instanceof HttpErrorResponse) {
         if (err.status === 403) {
-          // Permissão revogada mid-session: redireciona sem exibir snackbar genérico.
-          // O authInterceptor já trata 401 (token expirado), portanto aqui chegam apenas
-          // respostas 403 reais (usuário autenticado mas sem permissão para o recurso).
-          router.navigate(['/app/access-denied']);
+          // GET 403 = acesso à página/recurso negado → redireciona para access-denied.
+          // Exceção: endpoints DEV (/system/config, /system/info, /auth/dev/*) têm guards próprios
+          // que controlam o acesso — redirecionar aqui causaria loop ou UX quebrada.
+          const isDevEndpoint = req.url.includes('/system/config') || req.url.includes('/system/info');
+          if (req.method === 'GET' && !isDevEndpoint) {
+            router.navigate(['/app/access-denied']);
+          } else if (!isDevEndpoint) {
+            snackBar.open('Sem permissão para realizar esta ação.', 'Fechar', { duration: 4000 });
+          }
         } else if (err.status === 404) {
           snackBar.open('Recurso não encontrado.', 'Fechar', { duration: 4000 });
         } else if (err.status >= 500) {

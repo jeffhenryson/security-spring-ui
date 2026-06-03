@@ -24,6 +24,12 @@ export class SecurityService {
     return firstValueFrom(this.http.delete<void>(`${this.config.rootUrl}/auth/sessions/${id}`));
   }
 
+  loadTotpStatus(): Promise<{ enabled: boolean; backupCodesRemaining: number }> {
+    return firstValueFrom(
+      this.http.get<{ enabled: boolean; backupCodesRemaining: number }>(`${this.config.rootUrl}/auth/2fa/status`),
+    );
+  }
+
   startTotpSetup(): Promise<TotpSetupResponse> {
     return firstValueFrom(this.http.post<TotpSetupResponse>(`${this.config.rootUrl}/auth/2fa/setup`, {}));
   }

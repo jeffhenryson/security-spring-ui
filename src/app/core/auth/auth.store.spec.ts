@@ -17,12 +17,16 @@ describe('AuthStore', () => {
   let store: AuthStore;
 
   beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
     TestBed.configureTestingModule({});
     store = TestBed.inject(AuthStore);
-    localStorage.clear();
   });
 
-  afterEach(() => localStorage.clear());
+  afterEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
 
   // ── Estado inicial ────────────────────────────────────────────────────────
 
@@ -114,19 +118,64 @@ describe('AuthStore', () => {
     expect(store.userInitials()).toBe('?');
   });
 
+  // ── setDevToken / clearDevToken ───────────────────────────────────────────
+
+  it('setDevToken persiste token e expiração no sessionStorage', () => {
+    store.setDevToken('dev-xyz', 3600);
+    expect(store.devAccessToken()).toBe('dev-xyz');
+    expect(store.isDevElevated()).toBe(true);
+    expect(sessionStorage.getItem('ss_dev_token')).toBe('dev-xyz');
+    expect(Number(sessionStorage.getItem('ss_dev_expires'))).toBeGreaterThan(Date.now());
+  });
+
+  it('clearDevToken limpa signals e sessionStorage', () => {
+    store.setDevToken('dev-xyz', 3600);
+    store.clearDevToken();
+    expect(store.devAccessToken()).toBeNull();
+    expect(store.isDevElevated()).toBe(false);
+    expect(sessionStorage.getItem('ss_dev_token')).toBeNull();
+    expect(sessionStorage.getItem('ss_dev_expires')).toBeNull();
+  });
+
+  it('restaura devToken do sessionStorage se não expirou', () => {
+    const expires = Date.now() + 3_600_000;
+    sessionStorage.setItem('ss_dev_token', 'restored-dev');
+    sessionStorage.setItem('ss_dev_expires', String(expires));
+    // recria o store para simular reload
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({});
+    const freshStore = TestBed.inject(AuthStore);
+    expect(freshStore.devAccessToken()).toBe('restored-dev');
+    expect(freshStore.isDevElevated()).toBe(true);
+  });
+
+  it('não restaura devToken expirado do sessionStorage', () => {
+    sessionStorage.setItem('ss_dev_token', 'expired-dev');
+    sessionStorage.setItem('ss_dev_expires', String(Date.now() - 1000));
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({});
+    const freshStore = TestBed.inject(AuthStore);
+    expect(freshStore.devAccessToken()).toBeNull();
+    expect(freshStore.isDevElevated()).toBe(false);
+  });
+
   // ── clear ─────────────────────────────────────────────────────────────────
 
-  it('clear deve limpar token, usuário e localStorage', () => {
+  it('clear deve limpar token, usuário, localStorage e sessionStorage', () => {
     localStorage.setItem('ss_refresh_token', 'refresh-abc');
     store.setAccessToken('token-abc');
     store.setCurrentUser(MOCK_USER);
+    store.setDevToken('dev-xyz', 3600);
 
     store.clear();
 
     expect(store.accessToken()).toBeNull();
     expect(store.currentUser()).toBeNull();
     expect(store.isAuthenticated()).toBe(false);
+    expect(store.devAccessToken()).toBeNull();
     expect(localStorage.getItem('ss_refresh_token')).toBeNull();
+    expect(sessionStorage.getItem('ss_dev_token')).toBeNull();
+    expect(sessionStorage.getItem('ss_dev_expires')).toBeNull();
   });
 
 });

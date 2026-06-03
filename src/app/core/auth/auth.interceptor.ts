@@ -11,7 +11,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
 
   const token = store.accessToken();
-  const authReq = token
+  // Não sobrescreve o header se devAuthInterceptor já definiu o devAccessToken.
+  const authReq = token && !req.headers.has('Authorization')
     ? req.clone({
         setHeaders: { Authorization: `Bearer ${token}` },
       })

@@ -4,7 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { Router } from '@angular/router';
 import { AuthService } from './auth.service';
 import { AuthStore } from './auth.store';
-import { REFRESH_TOKEN_KEY } from './auth.constants';
+import { REFRESH_TOKEN_KEY, SESSION_MARKER_KEY } from './auth.constants';
 import { environment } from '../../../environments/environment';
 
 const API = environment.apiUrl;
@@ -75,7 +75,7 @@ describe('AuthService', () => {
       await promise;
 
       expect(store.accessToken()).toBe('access-abc');
-      expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBe('refresh-xyz');
+      expect(localStorage.getItem(SESSION_MARKER_KEY)).toBe('1');
       expect(store.currentUser()?.username).toBe('alice');
     });
 
@@ -133,7 +133,7 @@ describe('AuthService', () => {
   describe('logout', () => {
     it('deve limpar a store e redirecionar mesmo que o POST falhe (500)', async () => {
       store.setAccessToken('tok');
-      localStorage.setItem(REFRESH_TOKEN_KEY, 'refresh-tok');
+      localStorage.setItem(SESSION_MARKER_KEY, '1');
 
       const promise = service.logout();
       controller
@@ -142,13 +142,13 @@ describe('AuthService', () => {
       await promise;
 
       expect(store.accessToken()).toBeNull();
-      expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBeNull();
+      expect(localStorage.getItem(SESSION_MARKER_KEY)).toBeNull();
       expect(router.navigate).toHaveBeenCalledWith(['/auth/login']);
     });
 
     it('deve limpar a store e redirecionar após logout bem-sucedido', async () => {
       store.setAccessToken('tok');
-      localStorage.setItem(REFRESH_TOKEN_KEY, 'refresh-tok');
+      localStorage.setItem(SESSION_MARKER_KEY, '1');
 
       const promise = service.logout();
       controller.expectOne(`${API}/auth/logout`).flush({});
@@ -158,7 +158,7 @@ describe('AuthService', () => {
       expect(router.navigate).toHaveBeenCalledWith(['/auth/login']);
     });
 
-    it('não deve chamar POST /logout se não há refresh token', async () => {
+    it('não deve chamar POST /logout se não há marcador de sessão', async () => {
       await service.logout();
       controller.expectNone(`${API}/auth/logout`);
       expect(router.navigate).toHaveBeenCalledWith(['/auth/login']);
@@ -168,8 +168,8 @@ describe('AuthService', () => {
   // ── initSession ───────────────────────────────────────────────────────────
 
   describe('initSession', () => {
-    it('deve restaurar sessão quando há refresh token válido', async () => {
-      localStorage.setItem(REFRESH_TOKEN_KEY, 'refresh-tok');
+    it('deve restaurar sessão quando há marcador de sessão ativa', async () => {
+      localStorage.setItem(SESSION_MARKER_KEY, '1');
 
       const promise = service.initSession();
 
@@ -183,9 +183,9 @@ describe('AuthService', () => {
       expect(store.currentUser()?.username).toBe('alice');
     });
 
-    it('deve limpar a store quando refresh token é inválido', async () => {
+    it('deve limpar a store quando refresh cookie é inválido', async () => {
       store.setAccessToken('stale-token');
-      localStorage.setItem(REFRESH_TOKEN_KEY, 'bad-refresh');
+      localStorage.setItem(SESSION_MARKER_KEY, '1');
 
       const promise = service.initSession();
       controller
@@ -196,13 +196,13 @@ describe('AuthService', () => {
       expect(store.accessToken()).toBeNull();
     });
 
-    it('não deve fazer nenhum request quando não há refresh token', async () => {
+    it('não deve fazer nenhum request quando não há marcador de sessão', async () => {
       await service.initSession();
       controller.expectNone(`${API}/auth/refresh`);
     });
 
     it('não deve fazer dois requests de refresh quando chamado concorrentemente', async () => {
-      localStorage.setItem(REFRESH_TOKEN_KEY, 'refresh-tok');
+      localStorage.setItem(SESSION_MARKER_KEY, '1');
 
       const p1 = service.initSession();
       const p2 = service.initSession();

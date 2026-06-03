@@ -1,14 +1,30 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { CurrentUser } from './models/auth.models';
-import { REFRESH_TOKEN_KEY, SESSION_MARKER_KEY } from './auth.constants';
+import { REFRESH_TOKEN_KEY, SESSION_MARKER_KEY, DEV_TOKEN_KEY, DEV_TOKEN_EXPIRES_KEY } from './auth.constants';
 import { AVATAR_KEY_PREFIX } from './avatar.service';
 
 @Injectable({ providedIn: 'root' })
 export class AuthStore {
   private readonly _accessToken = signal<string | null>(null);
   private readonly _currentUser = signal<CurrentUser | null>(null);
-  private readonly _devAccessToken = signal<string | null>(null);
-  private readonly _devTokenExpiresAt = signal<number>(0);
+
+  // Restaura devToken do sessionStorage se ainda não expirou.
+  private readonly _devAccessToken = signal<string | null>(this._restoreDevToken());
+  private readonly _devTokenExpiresAt = signal<number>(this._restoreDevExpires());
+
+  private _restoreDevToken(): string | null {
+    const token = sessionStorage.getItem(DEV_TOKEN_KEY);
+    const expires = Number(sessionStorage.getItem(DEV_TOKEN_EXPIRES_KEY) ?? '0');
+    if (token && expires > Date.now()) return token;
+    sessionStorage.removeItem(DEV_TOKEN_KEY);
+    sessionStorage.removeItem(DEV_TOKEN_EXPIRES_KEY);
+    return null;
+  }
+
+  private _restoreDevExpires(): number {
+    const expires = Number(sessionStorage.getItem(DEV_TOKEN_EXPIRES_KEY) ?? '0');
+    return expires > Date.now() ? expires : 0;
+  }
 
   readonly accessToken = this._accessToken.asReadonly();
   readonly currentUser = this._currentUser.asReadonly();
@@ -29,10 +45,6 @@ export class AuthStore {
     () => !!this._devAccessToken() && Date.now() < this._devTokenExpiresAt(),
   );
 
-  readonly devSecondsLeft = computed(() =>
-    Math.max(0, Math.ceil((this._devTokenExpiresAt() - Date.now()) / 1000)),
-  );
-
   hasPermission(permission: string): boolean {
     return this.permissions().includes(permission);
   }
@@ -50,13 +62,18 @@ export class AuthStore {
   }
 
   setDevToken(token: string, expiresIn: number): void {
+    const expiresAt = Date.now() + expiresIn * 1000;
     this._devAccessToken.set(token);
-    this._devTokenExpiresAt.set(Date.now() + expiresIn * 1000);
+    this._devTokenExpiresAt.set(expiresAt);
+    sessionStorage.setItem(DEV_TOKEN_KEY, token);
+    sessionStorage.setItem(DEV_TOKEN_EXPIRES_KEY, String(expiresAt));
   }
 
   clearDevToken(): void {
     this._devAccessToken.set(null);
     this._devTokenExpiresAt.set(0);
+    sessionStorage.removeItem(DEV_TOKEN_KEY);
+    sessionStorage.removeItem(DEV_TOKEN_EXPIRES_KEY);
   }
 
   clear(): void {
@@ -68,5 +85,7 @@ export class AuthStore {
     this._devTokenExpiresAt.set(0);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(SESSION_MARKER_KEY);
+    sessionStorage.removeItem(DEV_TOKEN_KEY);
+    sessionStorage.removeItem(DEV_TOKEN_EXPIRES_KEY);
   }
 }

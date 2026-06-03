@@ -18,6 +18,12 @@ export interface HealthStatus {
   components?: Record<string, { status: string; details?: Record<string, unknown> }>;
 }
 
+export interface SystemInfo {
+  status: string;
+  profile: string;
+  profiles: string[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class DevService {
   private readonly http = inject(HttpClient);
@@ -38,6 +44,12 @@ export class DevService {
   health(): Promise<HealthStatus> {
     return firstValueFrom(
       this.http.get<HealthStatus>(`${this.config.rootUrl}/actuator/health`),
+    );
+  }
+
+  systemInfo(): Promise<SystemInfo> {
+    return firstValueFrom(
+      this.http.get<SystemInfo>(`${this.config.rootUrl}/system/info`),
     );
   }
 }

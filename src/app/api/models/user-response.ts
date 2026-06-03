@@ -3,6 +3,7 @@
 
 export interface UserResponse {
   avatarUrl?: string | null;
+  createdAt?: string | null;
   email: string | null;
   emailVerified: boolean;
   enabled: boolean;

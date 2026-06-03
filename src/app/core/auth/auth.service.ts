@@ -12,7 +12,7 @@ import {
   CurrentUser,
   isTwoFactorChallenge,
 } from './models/auth.models';
-import { REFRESH_TOKEN_KEY, SESSION_MARKER_KEY } from './auth.constants';
+import { SESSION_MARKER_KEY } from './auth.constants';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -55,12 +55,11 @@ export class AuthService {
   }
 
   async logout(): Promise<void> {
-    const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
-    const hasSession = !!refreshToken || !!localStorage.getItem(SESSION_MARKER_KEY);
+    const hasSession = !!localStorage.getItem(SESSION_MARKER_KEY);
     try {
       if (hasSession) {
         await firstValueFrom(
-          this.http.post(`${this.api}/auth/logout`, { refreshToken }, { withCredentials: true }),
+          this.http.post(`${this.api}/auth/logout`, {}, { withCredentials: true }),
         );
       }
     } catch {
@@ -84,14 +83,12 @@ export class AuthService {
   }
 
   private async _doRefresh(): Promise<void> {
-    const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
-    const hasSession = !!refreshToken || !!localStorage.getItem(SESSION_MARKER_KEY);
-    if (!hasSession) return;
+    if (!localStorage.getItem(SESSION_MARKER_KEY)) return;
     try {
       const pair = await firstValueFrom(
         this.http.post<TokenPairResponse>(
           `${this.api}/auth/refresh`,
-          refreshToken ? { refreshToken } : {},
+          {},
           { withCredentials: true },
         ),
       );
@@ -103,13 +100,7 @@ export class AuthService {
 
   async handleTokenPair(pair: TokenPairResponse): Promise<void> {
     this.store.setAccessToken(pair.accessToken);
-    if (pair.refreshToken) {
-      localStorage.setItem(REFRESH_TOKEN_KEY, pair.refreshToken);
-    } else {
-      // Modo cookie HttpOnly — o token não vem no body; marca que há sessão ativa
-      // para que _doRefresh e logout saibam tentar o endpoint mesmo sem token em localStorage.
-      localStorage.setItem(SESSION_MARKER_KEY, '1');
-    }
+    localStorage.setItem(SESSION_MARKER_KEY, '1');
     await this.loadCurrentUser();
   }
 
