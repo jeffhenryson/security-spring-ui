@@ -233,7 +233,8 @@ export class LoginComponent {
       this.failedAttempts.set(0);
       if (isTwoFactorChallenge(res)) {
         this.authService.setPendingChallengeToken(res.challengeToken);
-        this.router.navigate(['/auth/2fa']);
+        const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') ?? '';
+        this.router.navigate(['/auth/2fa'], returnUrl ? { queryParams: { returnUrl } } : {});
       } else {
         const raw = this.route.snapshot.queryParamMap.get('returnUrl') ?? '';
         // SECURITY: só aceita rotas internas — deve começar com '/' e não com '//'

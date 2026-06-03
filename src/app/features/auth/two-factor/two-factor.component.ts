@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal, OnInit } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
@@ -96,8 +96,10 @@ export class TwoFactorComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   private challengeToken = '';
+  private returnUrl = '/app/dashboard';
   readonly loading = signal(false);
   readonly errorMsg = signal('');
   readonly sessionExpired = signal(false);
@@ -113,6 +115,8 @@ export class TwoFactorComponent implements OnInit {
     if (!this.challengeToken) {
       this.sessionExpired.set(true);
     }
+    const raw = this.route.snapshot.queryParamMap.get('returnUrl') ?? '';
+    this.returnUrl = raw.startsWith('/') && !raw.startsWith('//') ? raw : '/app/dashboard';
   }
 
   toggleBackupCode(): void {
@@ -143,7 +147,7 @@ export class TwoFactorComponent implements OnInit {
         challengeToken: this.challengeToken,
         code: this.form.getRawValue().code,
       });
-      this.router.navigate(['/app/dashboard']);
+      this.router.navigateByUrl(this.returnUrl);
     } catch {
       this.errorMsg.set('Código inválido ou expirado.');
     } finally {

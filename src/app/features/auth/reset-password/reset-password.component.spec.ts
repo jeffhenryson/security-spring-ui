@@ -48,7 +48,7 @@ describe('ResetPasswordComponent', () => {
     });
 
     it('define success=true após redefinir senha com sucesso', async () => {
-      component.form.setValue({ newPassword: 'new456!', confirmPassword: 'new456!' });
+      component.form.setValue({ newPassword: 'NewPass@1', confirmPassword: 'NewPass@1' });
 
       const promise = component.onSubmit();
       controller
@@ -61,7 +61,7 @@ describe('ResetPasswordComponent', () => {
     });
 
     it('define errorMsg em caso de falha', async () => {
-      component.form.setValue({ newPassword: 'new456!', confirmPassword: 'new456!' });
+      component.form.setValue({ newPassword: 'NewPass@1', confirmPassword: 'NewPass@1' });
 
       const promise = component.onSubmit();
       controller
@@ -74,7 +74,14 @@ describe('ResetPasswordComponent', () => {
     });
 
     it('não submete se as senhas não coincidirem', async () => {
-      component.form.setValue({ newPassword: 'abc123', confirmPassword: 'different' });
+      component.form.setValue({ newPassword: 'NewPass@1', confirmPassword: 'Different@1' });
+
+      await component.onSubmit();
+      controller.expectNone(`${API}/auth/reset-password`);
+    });
+
+    it('não submete se a senha não atender a política (sem maiúscula, curta)', async () => {
+      component.form.setValue({ newPassword: 'new456!', confirmPassword: 'new456!' });
 
       await component.onSubmit();
       controller.expectNone(`${API}/auth/reset-password`);

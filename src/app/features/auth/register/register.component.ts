@@ -11,7 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../../core/auth/auth.service';
 import { GoogleAuthService } from '../../../core/auth/google-auth.service';
 import { AppConfigStore } from '../../../core/config/app-config.store';
-import { passwordMatchValidator } from '../../../core/validators/password.validators';
+import { passwordMatchValidator, passwordPolicyValidator } from '../../../core/validators/password.validators';
 import { PasswordStrengthComponent } from '../../../shared/password-strength/password-strength.component';
 
 @Component({
@@ -95,8 +95,8 @@ import { PasswordStrengthComponent } from '../../../shared/password-strength/pas
                       [attr.aria-label]="showPwd() ? 'Ocultar senha' : 'Mostrar senha'">
                 <mat-icon class="!text-[18px]">{{ showPwd() ? 'visibility_off' : 'visibility' }}</mat-icon>
               </button>
-              @if (form.get('password')?.hasError('minlength') && form.get('password')?.touched) {
-                <mat-error id="reg-password-error">Mínimo 8 caracteres</mat-error>
+              @if (form.get('password')?.hasError('passwordPolicy') && form.get('password')?.touched) {
+                <mat-error id="reg-password-error">Mín. 8 chars com maiúscula, número e caractere especial</mat-error>
               }
             </mat-form-field>
             <app-password-strength [password]="form.get('password')?.value ?? null" />
@@ -201,7 +201,7 @@ export class RegisterComponent {
     {
       username: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(8)]],
+      password: ['', [Validators.required, passwordPolicyValidator]],
       confirmPassword: ['', Validators.required],
     },
     { validators: passwordMatchValidator },

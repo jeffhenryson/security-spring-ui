@@ -7,7 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../../core/auth/auth.service';
-import { passwordMatchValidator } from '../../../core/validators/password.validators';
+import { passwordMatchValidator, passwordPolicyValidator } from '../../../core/validators/password.validators';
 import { PasswordStrengthComponent } from '../../../shared/password-strength/password-strength.component';
 
 @Component({
@@ -67,10 +67,8 @@ import { PasswordStrengthComponent } from '../../../shared/password-strength/pas
                       [attr.aria-label]="showNew() ? 'Ocultar senha' : 'Mostrar senha'">
                 <mat-icon class="!text-[18px]">{{ showNew() ? 'visibility_off' : 'visibility' }}</mat-icon>
               </button>
-              @if (
-                form.get('newPassword')?.hasError('minlength') && form.get('newPassword')?.touched
-              ) {
-                <mat-error>Mínimo 6 caracteres</mat-error>
+              @if (form.get('newPassword')?.hasError('passwordPolicy') && form.get('newPassword')?.touched) {
+                <mat-error>Mín. 8 chars com maiúscula, número e caractere especial</mat-error>
               }
             </mat-form-field>
             <app-password-strength [password]="form.get('newPassword')?.value ?? null" />
@@ -134,7 +132,7 @@ export class ResetPasswordComponent implements OnInit {
 
   readonly form = this.fb.nonNullable.group(
     {
-      newPassword: ['', [Validators.required, Validators.minLength(6)]],
+      newPassword: ['', [Validators.required, passwordPolicyValidator]],
       confirmPassword: ['', Validators.required],
     },
     { validators: passwordMatchValidator },

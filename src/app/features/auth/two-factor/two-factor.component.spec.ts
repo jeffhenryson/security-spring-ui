@@ -1,19 +1,28 @@
 import { TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { TwoFactorComponent } from './two-factor.component';
 import { AuthService } from '../../../core/auth/auth.service';
+
+function makeRoute(returnUrl: string | null = null) {
+  return {
+    snapshot: {
+      queryParamMap: { get: (_key: string) => returnUrl },
+    },
+  };
+}
 
 describe('TwoFactorComponent', () => {
   let component: TwoFactorComponent;
   let authService: jest.Mocked<Pick<AuthService, 'verify2FA' | 'consumePendingChallengeToken'>>;
-  let router: jest.Mocked<Pick<Router, 'navigate'>>;
+  let router: jest.Mocked<Pick<Router, 'navigateByUrl'>>;
 
-  async function setup() {
+  async function setup(returnUrl: string | null = null) {
     return TestBed.configureTestingModule({
       imports: [TwoFactorComponent],
       providers: [
         { provide: AuthService, useValue: authService },
         { provide: Router, useValue: router },
+        { provide: ActivatedRoute, useValue: makeRoute(returnUrl) },
       ],
     })
       .overrideTemplate(TwoFactorComponent, '')
@@ -25,7 +34,7 @@ describe('TwoFactorComponent', () => {
       verify2FA: jest.fn().mockResolvedValue(undefined),
       consumePendingChallengeToken: jest.fn(),
     };
-    router = { navigate: jest.fn() };
+    router = { navigateByUrl: jest.fn() };
   });
 
   describe('quando há token pendente no AuthService', () => {
@@ -49,7 +58,7 @@ describe('TwoFactorComponent', () => {
         challengeToken: 'chal-abc',
         code: '123456',
       });
-      expect(router.navigate).toHaveBeenCalledWith(['/app/dashboard']);
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/app/dashboard');
       expect(component.loading()).toBe(false);
     });
 
@@ -59,7 +68,7 @@ describe('TwoFactorComponent', () => {
       await component.onSubmit();
 
       expect(component.errorMsg()).toBe('Código inválido ou expirado.');
-      expect(router.navigate).not.toHaveBeenCalled();
+      expect(router.navigateByUrl).not.toHaveBeenCalled();
       expect(component.loading()).toBe(false);
     });
 
@@ -67,6 +76,38 @@ describe('TwoFactorComponent', () => {
       component.form.setValue({ code: '12' });
       await component.onSubmit();
       expect(authService.verify2FA).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('quando há returnUrl no query param', () => {
+    beforeEach(async () => {
+      authService.consumePendingChallengeToken.mockReturnValue('chal-xyz');
+      await setup('/app/settings/profile');
+      const fixture = TestBed.createComponent(TwoFactorComponent);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+    });
+
+    it('redireciona para o returnUrl após verificação bem-sucedida', async () => {
+      component.form.setValue({ code: '123456' });
+      await component.onSubmit();
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/app/settings/profile');
+    });
+  });
+
+  describe('quando returnUrl é inválido (open redirect)', () => {
+    beforeEach(async () => {
+      authService.consumePendingChallengeToken.mockReturnValue('chal-xyz');
+      await setup('//evil.com');
+      const fixture = TestBed.createComponent(TwoFactorComponent);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+    });
+
+    it('redireciona para /app/dashboard ignorando URL externa', async () => {
+      component.form.setValue({ code: '123456' });
+      await component.onSubmit();
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/app/dashboard');
     });
   });
 

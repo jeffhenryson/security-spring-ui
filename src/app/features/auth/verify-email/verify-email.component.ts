@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal, OnInit } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -113,7 +113,7 @@ type ViewState = 'loading' | 'success' | 'manual-form';
     </div>
   `,
 })
-export class VerifyEmailComponent implements OnInit, OnDestroy {
+export class VerifyEmailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly authService = inject(AuthService);
   private readonly fb = inject(FormBuilder);
@@ -133,8 +133,10 @@ export class VerifyEmailComponent implements OnInit, OnDestroy {
   private email = '';
   private resendTimer: ReturnType<typeof setTimeout> | null = null;
 
-  ngOnDestroy(): void {
-    if (this.resendTimer !== null) clearTimeout(this.resendTimer);
+  constructor() {
+    inject(DestroyRef).onDestroy(() => {
+      if (this.resendTimer !== null) clearTimeout(this.resendTimer);
+    });
   }
 
   ngOnInit(): void {
