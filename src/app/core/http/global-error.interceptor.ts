@@ -15,7 +15,10 @@ export const globalErrorInterceptor: HttpInterceptorFn = (req, next) => {
           // GET 403 = acesso à página/recurso negado → redireciona para access-denied.
           // Exceção: endpoints DEV (/system/config, /system/info, /auth/dev/*) têm guards próprios
           // que controlam o acesso — redirecionar aqui causaria loop ou UX quebrada.
-          const isDevEndpoint = req.url.includes('/system/config') || req.url.includes('/system/info');
+          const isDevEndpoint =
+            req.url.includes('/system/config') ||
+            req.url.includes('/system/info') ||
+            req.url.includes('/actuator/');
           if (req.method === 'GET' && !isDevEndpoint) {
             router.navigate(['/app/access-denied']);
           } else if (!isDevEndpoint) {

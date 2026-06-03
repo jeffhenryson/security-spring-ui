@@ -1,4 +1,6 @@
 import { TestBed } from '@angular/core/testing';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { AvatarService, AVATAR_KEY_PREFIX } from './avatar.service';
 import { AuthStore } from './auth.store';
 import { CurrentUser } from './models/auth.models';
@@ -17,15 +19,25 @@ const MOCK_USER: CurrentUser = {
 describe('AvatarService', () => {
   let service: AvatarService;
   let store: AuthStore;
+  let controller: HttpTestingController;
 
   beforeEach(() => {
     localStorage.clear();
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(withInterceptors([])),
+        provideHttpClientTesting(),
+      ],
+    });
     service = TestBed.inject(AvatarService);
     store = TestBed.inject(AuthStore);
+    controller = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => localStorage.clear());
+  afterEach(() => {
+    controller.verify();
+    localStorage.clear();
+  });
 
   it('retorna null quando não há usuário logado', () => {
     expect(service.currentAvatar()).toBeNull();
@@ -70,5 +82,63 @@ describe('AvatarService', () => {
 
     store.setCurrentUser(MOCK_USER);
     expect(service.currentAvatar()).toBe('data:image/jpeg;base64,user42');
+  });
+
+  it('prefere localStorage sobre avatarUrl do backend', () => {
+    localStorage.setItem(`${AVATAR_KEY_PREFIX}42`, 'data:image/jpeg;base64,local');
+    store.setCurrentUser({ ...MOCK_USER, avatarUrl: 'http://backend/avatar' });
+    expect(service.currentAvatar()).toBe('data:image/jpeg;base64,local');
+  });
+
+  // ── fetchAndCache: HTTP + FileReader ───────────────────────────────────────
+
+  it('fetchAndCache: faz GET, converte blob e atualiza signal + localStorage', async () => {
+    const mockDataUrl = 'data:image/jpeg;base64,frombackend';
+
+    // Simula FileReader: quando readAsDataURL é chamado, dispara onload com o dataUrl
+    const fileReaderMock = {
+      result: mockDataUrl,
+      onload: null as (() => void) | null,
+      onerror: null as (() => void) | null,
+      readAsDataURL: jest.fn().mockImplementation(function (this: typeof fileReaderMock) {
+        Promise.resolve().then(() => this.onload?.());
+      }),
+    };
+    jest
+      .spyOn(global, 'FileReader' as keyof typeof global)
+      .mockImplementation(() => fileReaderMock as unknown as FileReader);
+
+    // Usuário com avatarUrl e sem cache local
+    store.setCurrentUser({ ...MOCK_USER, avatarUrl: 'http://backend/avatar.jpg' });
+
+    // Aguarda o effect() disparar e a chamada HTTP ser enfileirada
+    await Promise.resolve();
+
+    const req = controller.expectOne('http://backend/avatar.jpg');
+    expect(req.request.responseType).toBe('blob');
+    req.flush(new Blob(['img'], { type: 'image/jpeg' }));
+
+    // Aguarda FileReader.onload e a atualização do signal
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(service.currentAvatar()).toBe(mockDataUrl);
+    expect(localStorage.getItem(`${AVATAR_KEY_PREFIX}42`)).toBe(mockDataUrl);
+
+    jest.restoreAllMocks();
+  });
+
+  it('fetchAndCache: erro HTTP não quebra o serviço (silent fail)', async () => {
+    store.setCurrentUser({ ...MOCK_USER, avatarUrl: 'http://backend/avatar.jpg' });
+    await Promise.resolve();
+
+    controller.expectOne('http://backend/avatar.jpg').flush(
+      'Not Found',
+      { status: 404, statusText: 'Not Found' },
+    );
+    await Promise.resolve();
+
+    // Continua retornando null sem lançar erro
+    expect(service.currentAvatar()).toBeNull();
   });
 });

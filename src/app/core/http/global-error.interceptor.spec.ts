@@ -113,6 +113,14 @@ describe('globalErrorInterceptor', () => {
     );
   });
 
+  it('não redireciona em GET 403 para /actuator/**', async () => {
+    http.get('/actuator/health').subscribe({ error: () => {} });
+    controller.expectOne('/actuator/health').flush({}, { status: 403, statusText: 'Forbidden' });
+    await Promise.resolve();
+    expect(router.navigate).not.toHaveBeenCalled();
+    expect(snackBar.open).not.toHaveBeenCalled();
+  });
+
   it('não exibe snackbar para respostas de sucesso', async () => {
     let result: unknown;
     http.get('/api/test').subscribe({ next: (r) => (result = r) });
