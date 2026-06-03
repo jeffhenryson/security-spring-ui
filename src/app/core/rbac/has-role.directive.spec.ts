@@ -84,22 +84,4 @@ describe('HasRoleDirective', () => {
     });
   });
 
-  // ── Limitação: @Input não é signal ──────────────────────────────────────────
-  //
-  // `this.role` é uma string plana, não um signal. O effect() rastreia
-  // `store.roles()` mas NÃO rastreia mudanças no @Input. Por isso, se apenas
-  // o binding do template mudar (sem que `store.roles()` mude), o effect não
-  // re-executa e o DOM não é atualizado.
-  //
-  // Esse comportamento não pode ser testado diretamente via detectChanges() pois
-  // Angular 21 lança NG0100 (ExpressionChangedAfterChecked) ao mutar uma propriedade
-  // de template após o primeiro ciclo de CD. A limitação está documentada aqui como
-  // referência para futuros mantenedores:
-  //
-  //   1. Usuário tem ADMIN. Input é MODERATOR → elemento oculto. ✓
-  //   2. Input muda para ADMIN (sem store.roles() mudar).
-  //   3. Effect NÃO re-executa → elemento permanece oculto. ✗ (limitação)
-  //
-  // Para eliminar a limitação, converter `private role = ''` em um signal
-  // e usar `input()` (signal-based input) em vez de `@Input()`.
 });
