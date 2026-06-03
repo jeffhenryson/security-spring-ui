@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ApiConfiguration } from '../../api/api-configuration';
+import { environment } from '../../../environments/environment';
 
 export interface DevFirstCodeResponse {
   devToken: string;
@@ -42,8 +43,9 @@ export class DevService {
   }
 
   health(): Promise<HealthStatus> {
+    const base = environment.actuatorUrl || this.config.rootUrl;
     return firstValueFrom(
-      this.http.get<HealthStatus>(`${this.config.rootUrl}/actuator/health`),
+      this.http.get<HealthStatus>(`${base}/actuator/health`),
     );
   }
 

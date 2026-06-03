@@ -1,7 +1,7 @@
 export const environment = {
   production: true,
   apiUrl: '',
-  // Set via CI/CD at build time
+  actuatorUrl: '', // em HML/prod o actuator roda na porta 8081 — configure via CI/CD (ex: https://api.exemplo.com:8081)
   googleClientId: '',
   grafanaUrl: '',
   sentryDsn: '',
