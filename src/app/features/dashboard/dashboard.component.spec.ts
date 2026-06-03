@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { DashboardComponent } from './dashboard.component';
 import { StatsService, StatsResponse } from '../../core/admin/stats.service';
+import { AuditLogsService } from '../../core/admin/audit-logs.service';
 import { AuthStore } from '../../core/auth/auth.store';
 
 const MOCK_STATS: StatsResponse = {
@@ -31,12 +32,14 @@ describe('DashboardComponent', () => {
   function setup(permissions: string[] = []) {
     statsService = { get: jest.fn().mockResolvedValue(MOCK_STATS) };
     snackBar = { open: jest.fn() };
+    const auditLogsService = { list: jest.fn().mockResolvedValue({ content: [] }) };
 
     TestBed.configureTestingModule({
       imports: [DashboardComponent],
       providers: [
         { provide: StatsService, useValue: statsService },
         { provide: MatSnackBar, useValue: snackBar },
+        { provide: AuditLogsService, useValue: auditLogsService },
       ],
     })
       .overrideTemplate(DashboardComponent, '')
