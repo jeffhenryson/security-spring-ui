@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   OnInit,
+  computed,
   inject,
   signal,
 } from '@angular/core';
@@ -70,13 +71,13 @@ import { DateFormatPipe } from '../../../../shared/date-format.pipe';
             </div>
           }
         </div>
-      } @else if (sessions().length === 0) {
+      } @else if (sessionsWithAgent().length === 0) {
         <p class="text-[var(--text-muted)] text-sm text-center py-8 m-0">
           Nenhuma sessão ativa encontrada.
         </p>
       } @else {
         <div class="overflow-x-auto">
-          <table mat-table [dataSource]="sessions()" class="w-full" aria-label="Sessões ativas">
+          <table mat-table [dataSource]="sessionsWithAgent()" class="w-full" aria-label="Sessões ativas">
             <ng-container matColumnDef="createdAt">
               <th mat-header-cell *matHeaderCellDef class="!text-[var(--text-secondary)] !text-xs">
                 Criado em
@@ -107,7 +108,7 @@ import { DateFormatPipe } from '../../../../shared/date-format.pipe';
               </th>
               <td mat-cell *matCellDef="let s" class="!text-[var(--text-secondary)] !text-xs max-w-xs"
                   [matTooltip]="s.userAgent ?? ''" matTooltipShowDelay="600">
-                {{ parseAgent(s.userAgent) }}
+                {{ s.parsedAgent }}
               </td>
             </ng-container>
             <ng-container matColumnDef="actions">
@@ -148,6 +149,9 @@ export class SessionsComponent implements OnInit {
   readonly skeletonRows = Array(3).fill(0);
 
   readonly sessions = signal<SessionInfo[]>([]);
+  readonly sessionsWithAgent = computed(() =>
+    this.sessions().map((s) => ({ ...s, parsedAgent: parseAgent(s.userAgent) })),
+  );
   readonly loading = signal(true);
   readonly terminatingAll = signal(false);
   readonly revokingId = signal<number | null>(null);
@@ -209,28 +213,27 @@ export class SessionsComponent implements OnInit {
     }
   }
 
-  parseAgent(ua: string | null): string {
-    if (!ua) return '—';
+}
 
-    // Navegador
-    let browser = 'Navegador desconhecido';
-    if (/Edg\//.test(ua))          browser = 'Edge';
-    else if (/OPR\/|Opera/.test(ua)) browser = 'Opera';
-    else if (/Chrome\//.test(ua))  browser = 'Chrome';
-    else if (/Firefox\//.test(ua)) browser = 'Firefox';
-    else if (/Safari\//.test(ua) && !/Chrome/.test(ua)) browser = 'Safari';
+export function parseAgent(ua: string | null): string {
+  if (!ua) return '—';
 
-    // Sistema operacional
-    let os = '';
-    if (/Windows NT 10/.test(ua))      os = 'Windows 10/11';
-    else if (/Windows NT 6\.3/.test(ua)) os = 'Windows 8.1';
-    else if (/Windows/.test(ua))       os = 'Windows';
-    else if (/iPhone/.test(ua))        os = 'iPhone';
-    else if (/iPad/.test(ua))          os = 'iPad';
-    else if (/Android/.test(ua))       os = 'Android';
-    else if (/Mac OS X/.test(ua))      os = 'macOS';
-    else if (/Linux/.test(ua))         os = 'Linux';
+  let browser = 'Navegador desconhecido';
+  if (/Edg\//.test(ua))            browser = 'Edge';
+  else if (/OPR\/|Opera/.test(ua)) browser = 'Opera';
+  else if (/Chrome\//.test(ua))    browser = 'Chrome';
+  else if (/Firefox\//.test(ua))   browser = 'Firefox';
+  else if (/Safari\//.test(ua) && !/Chrome/.test(ua)) browser = 'Safari';
 
-    return os ? `${browser} · ${os}` : browser;
-  }
+  let os = '';
+  if (/Windows NT 10/.test(ua))       os = 'Windows 10/11';
+  else if (/Windows NT 6\.3/.test(ua)) os = 'Windows 8.1';
+  else if (/Windows/.test(ua))        os = 'Windows';
+  else if (/iPhone/.test(ua))         os = 'iPhone';
+  else if (/iPad/.test(ua))           os = 'iPad';
+  else if (/Android/.test(ua))        os = 'Android';
+  else if (/Mac OS X/.test(ua))       os = 'macOS';
+  else if (/Linux/.test(ua))          os = 'Linux';
+
+  return os ? `${browser} · ${os}` : browser;
 }

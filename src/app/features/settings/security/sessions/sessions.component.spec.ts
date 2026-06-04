@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { of } from 'rxjs';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
-import { SessionsComponent } from './sessions.component';
+import { SessionsComponent, parseAgent } from './sessions.component';
 import { AuthStore } from '../../../../core/auth/auth.store';
 import { SecurityService } from '../../../../core/security/security.service';
 import { SessionInfo } from '../../../../core/auth/models/auth.models';
@@ -131,5 +131,41 @@ describe('SessionsComponent', () => {
         { duration: 3000 },
       );
     });
+  });
+});
+
+describe('parseAgent()', () => {
+  it('retorna "—" para null', () => {
+    expect(parseAgent(null)).toBe('—');
+  });
+
+  it('detecta Chrome no Windows 10', () => {
+    const ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0';
+    expect(parseAgent(ua)).toBe('Chrome · Windows 10/11');
+  });
+
+  it('detecta Firefox no Linux', () => {
+    const ua = 'Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/115.0';
+    expect(parseAgent(ua)).toBe('Firefox · Linux');
+  });
+
+  it('detecta Edge', () => {
+    const ua = 'Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 Chrome/120.0.0.0 Edg/120.0.0.0';
+    expect(parseAgent(ua)).toBe('Edge · Windows 10/11');
+  });
+
+  it('detecta Safari no macOS', () => {
+    const ua = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Safari/604.1';
+    expect(parseAgent(ua)).toBe('Safari · macOS');
+  });
+
+  it('detecta Android', () => {
+    const ua = 'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 Chrome/120.0.0.0';
+    expect(parseAgent(ua)).toBe('Chrome · Android');
+  });
+
+  it('retorna apenas navegador quando OS é desconhecido', () => {
+    const ua = 'CustomBot/1.0';
+    expect(parseAgent(ua)).toBe('Navegador desconhecido');
   });
 });
