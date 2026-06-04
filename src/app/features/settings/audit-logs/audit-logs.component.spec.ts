@@ -48,7 +48,9 @@ describe('AuditLogsComponent', () => {
 
   it('carrega logs de auditoria no ngOnInit com pageSize=25', () => {
     expect(component.paged.size()).toBe(25);
-    expect(auditLogsService.list).toHaveBeenCalledWith(0, 25, { action: undefined, userId: undefined });
+    expect(auditLogsService.list).toHaveBeenCalledWith(0, 25, {
+      action: undefined, userId: undefined, from: undefined, to: undefined, excludeDevEvents: true,
+    });
     expect(component.paged.rows()).toEqual([MOCK_ENTRY]);
     expect(component.paged.total()).toBe(1);
     expect(component.paged.loading()).toBe(false);
@@ -81,7 +83,9 @@ describe('AuditLogsComponent', () => {
 
     expect(component.paged.page()).toBe(1);
     expect(component.paged.size()).toBe(50);
-    expect(auditLogsService.list).toHaveBeenCalledWith(1, 50, { action: undefined, userId: undefined });
+    expect(auditLogsService.list).toHaveBeenCalledWith(1, 50, {
+      action: undefined, userId: undefined, from: undefined, to: undefined, excludeDevEvents: true,
+    });
   });
 
   // ── filtros ───────────────────────────────────────────────────────────────
@@ -95,7 +99,7 @@ describe('AuditLogsComponent', () => {
     expect(auditLogsService.list).toHaveBeenCalledWith(
       expect.any(Number),
       expect.any(Number),
-      { action: undefined, userId: 'alice' },
+      { action: undefined, userId: 'alice', from: undefined, to: undefined, excludeDevEvents: true },
     );
   });
 
@@ -108,7 +112,7 @@ describe('AuditLogsComponent', () => {
     expect(auditLogsService.list).toHaveBeenCalledWith(
       expect.any(Number),
       expect.any(Number),
-      { action: 'USER_CREATED', userId: undefined },
+      { action: 'USER_CREATED', userId: undefined, from: undefined, to: undefined, excludeDevEvents: true },
     );
   });
 
@@ -122,18 +126,15 @@ describe('AuditLogsComponent', () => {
     expect(auditLogsService.list).toHaveBeenCalledWith(
       expect.any(Number),
       expect.any(Number),
-      { action: undefined, userId: undefined },
+      { action: undefined, userId: undefined, from: undefined, to: undefined, excludeDevEvents: true },
     );
   });
 
-  // ── badgeClass ────────────────────────────────────────────────────────────
+  // ── availableActions ──────────────────────────────────────────────────────
 
-  it('badgeClass retorna classe colorida para ação conhecida', () => {
-    expect(component.badgeClass('USER_LOGGED_IN')).toContain('blue');
-    expect(component.badgeClass('USER_DELETED')).toContain('red');
-  });
-
-  it('badgeClass retorna classe padrão para ação desconhecida', () => {
-    expect(component.badgeClass('ACAO_DESCONHECIDA')).toContain('surface-hover');
+  it('availableActions não contém eventos exclusivos DEV', () => {
+    // DEV_ELEVATION_COMPLETED é filtrado — apenas admins veem audit-logs
+    expect(component.availableActions).not.toContain('DEV_ELEVATION_COMPLETED');
+    expect(component.availableActions).toContain('USER_LOGGED_IN');
   });
 });

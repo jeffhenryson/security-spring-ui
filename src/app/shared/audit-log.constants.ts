@@ -45,11 +45,11 @@ export const AUDIT_CRITICAL_EVENTS = new Set([
   'DEV_ELEVATION_COMPLETED',
 ]);
 
-/** Eventos exclusivos da área DEV — filtrados da view ADMIN. */
+/** Eventos exclusivos da área DEV — filtrados da view ADMIN.
+ *  LOGIN_FAILED, ACCOUNT_LOCKED e TOKEN_THEFT_DETECTED são visíveis a admins
+ *  porque indicam ataques ativos — o admin precisa monitorar esses eventos.
+ */
 export const AUDIT_DEV_ONLY_EVENTS = new Set([
-  'LOGIN_FAILED',
-  'ACCOUNT_LOCKED',
-  'TOKEN_THEFT_DETECTED',
   'DEV_ELEVATION_COMPLETED',
 ]);
 

@@ -2,8 +2,6 @@ import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject } from '
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
-import { MatTableModule } from '@angular/material/table';
-import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
@@ -11,11 +9,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatDatepickerModule } from '@angular/material/datepicker';
 import { AuditLogsService, AuditLogResponse, AuditLogFilters } from '../../../core/admin/audit-logs.service';
-import { EmptyStateComponent } from '../../../shared/empty-state/empty-state.component';
 import { PagedState } from '../../../core/admin/paged-state';
-import { DateFormatPipe } from '../../../shared/date-format.pipe';
-import { AUDIT_ACTION_COLORS, auditBadgeClass } from '../../../shared/audit-log.constants';
+import { AUDIT_ACTION_COLORS, AUDIT_DEV_ONLY_EVENTS } from '../../../shared/audit-log.constants';
+import { downloadCsv, csvEscape } from '../../../shared/csv-export';
+import { AuditLogTableComponent } from '../../../shared/audit-log-table/audit-log-table.component';
 
 const KNOWN_ACTIONS = Object.keys(AUDIT_ACTION_COLORS)
   .filter((a) => !AUDIT_DEV_ONLY_EVENTS.has(a))
@@ -27,16 +26,14 @@ const KNOWN_ACTIONS = Object.keys(AUDIT_ACTION_COLORS)
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ReactiveFormsModule,
-    MatTableModule,
-    MatPaginatorModule,
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
     MatIconModule,
     MatButtonModule,
     MatTooltipModule,
-    EmptyStateComponent,
-    DateFormatPipe,
+    MatDatepickerModule,
+    AuditLogTableComponent,
   ],
   template: `
     <div class="p-6 max-w-5xl mx-auto flex flex-col gap-6">
@@ -71,96 +68,31 @@ const KNOWN_ACTIONS = Object.keys(AUDIT_ACTION_COLORS)
             }
           </mat-select>
         </mat-form-field>
+
+        <mat-form-field appearance="outline" class="w-full !pb-0 sm:col-span-2">
+          <mat-label>Período</mat-label>
+          <mat-date-range-input [formGroup]="dateRangeGroup" [rangePicker]="picker">
+            <input matStartDate formControlName="start" placeholder="Data início" />
+            <input matEndDate formControlName="end" placeholder="Data fim" />
+          </mat-date-range-input>
+          <mat-datepicker-toggle matIconSuffix [for]="picker" />
+          <mat-date-range-picker #picker />
+          @if (hasDateFilter()) {
+            <button matSuffix mat-icon-button aria-label="Limpar datas" (click)="clearDateRange()">
+              <mat-icon class="!text-[18px]">close</mat-icon>
+            </button>
+          }
+        </mat-form-field>
       </div>
 
-      <div
-        class="bg-[var(--surface-color)] border border-[var(--border-color)] rounded-xl overflow-hidden"
-      >
-        @if (paged.loading()) {
-          <div class="divide-y divide-[var(--border-color)]">
-            @for (i of skeletonRows; track i) {
-              <div class="flex items-center gap-4 px-6 py-4">
-                <div class="skeleton h-3.5 w-32 rounded"></div>
-                <div class="skeleton h-5 w-36 rounded-full"></div>
-                <div class="skeleton h-3.5 w-20 rounded ml-2"></div>
-                <div class="skeleton h-3.5 flex-1 rounded ml-2"></div>
-              </div>
-            }
-          </div>
-        } @else if (paged.rows().length === 0) {
-          <app-empty-state message="Nenhum log encontrado." icon="history" />
-        } @else {
-          <div class="overflow-x-auto">
-            <table mat-table [dataSource]="paged.rows()" class="w-full" aria-label="Logs de auditoria">
-              <ng-container matColumnDef="timestamp">
-                <th mat-header-cell *matHeaderCellDef class="!text-[var(--text-secondary)] !text-xs !pl-6">
-                  Data/hora
-                </th>
-                <td mat-cell *matCellDef="let l" class="!text-[var(--text-secondary)] !text-xs !pl-6 whitespace-nowrap">
-                  {{ l.timestamp | dateFormat }}
-                </td>
-              </ng-container>
-
-              <ng-container matColumnDef="action">
-                <th mat-header-cell *matHeaderCellDef class="!text-[var(--text-secondary)] !text-xs">
-                  Ação
-                </th>
-                <td mat-cell *matCellDef="let l" class="!py-2">
-                  <span class="px-2 py-0.5 rounded text-xs font-mono font-medium {{ badgeClass(l.action) }}">
-                    {{ l.action }}
-                  </span>
-                </td>
-              </ng-container>
-
-              <ng-container matColumnDef="who">
-                <th mat-header-cell *matHeaderCellDef class="!text-[var(--text-secondary)] !text-xs">
-                  Autor
-                </th>
-                <td mat-cell *matCellDef="let l" class="!text-[var(--text-primary)] !text-sm !font-medium">
-                  {{ l.who }}
-                </td>
-              </ng-container>
-
-              <ng-container matColumnDef="target">
-                <th mat-header-cell *matHeaderCellDef class="!text-[var(--text-secondary)] !text-xs">
-                  Alvo
-                </th>
-                <td mat-cell *matCellDef="let l" class="!text-[var(--text-secondary)] !text-sm">
-                  {{ l.target ?? '—' }}
-                </td>
-              </ng-container>
-
-              <ng-container matColumnDef="ipAddress">
-                <th mat-header-cell *matHeaderCellDef class="!text-[var(--text-secondary)] !text-xs">
-                  IP
-                </th>
-                <td
-                  mat-cell
-                  *matCellDef="let l"
-                  class="!text-[var(--text-muted)] !text-xs max-w-xs truncate !pr-4"
-                  [matTooltip]="l.ipAddress ?? ''"
-                >
-                  {{ l.ipAddress ?? '—' }}
-                </td>
-              </ng-container>
-
-              <tr mat-header-row *matHeaderRowDef="cols"></tr>
-              <tr
-                mat-row
-                *matRowDef="let row; columns: cols"
-                class="hover:bg-[var(--surface-hover)] transition-colors"
-              ></tr>
-            </table>
-          </div>
-          <mat-paginator
-            [length]="paged.total()"
-            [pageSize]="paged.size()"
-            [pageSizeOptions]="[25, 50, 100]"
-            (page)="onPage($event)"
-            class="border-t border-[var(--border-color)]"
-          />
-        }
-      </div>
+      <app-audit-log-table
+        [rows]="paged.rows()"
+        [loading]="paged.loading()"
+        [total]="paged.total()"
+        [pageSize]="paged.size()"
+        ariaLabel="Logs de auditoria"
+        (pageChange)="onPage($event)"
+      />
     </div>
   `,
 })
@@ -170,13 +102,20 @@ export class AuditLogsComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
 
-  readonly cols = ['timestamp', 'action', 'who', 'target', 'ipAddress'];
   readonly paged = new PagedState<AuditLogResponse>();
-  readonly skeletonRows = Array(8).fill(0);
   readonly availableActions = KNOWN_ACTIONS;
 
   readonly userIdControl = this.fb.control('');
   readonly actionControl = this.fb.control('');
+  readonly dateRangeGroup = this.fb.group({ start: [null as Date | null], end: [null as Date | null] });
+
+  hasDateFilter(): boolean {
+    return !!(this.dateRangeGroup.value.start || this.dateRangeGroup.value.end);
+  }
+
+  clearDateRange(): void {
+    this.dateRangeGroup.reset();
+  }
 
   ngOnInit(): void {
     this.paged.size.set(25);
@@ -187,13 +126,26 @@ export class AuditLogsComponent implements OnInit {
 
     withDebounce(this.userIdControl).subscribe(() => { this.paged.page.set(0); this.load(); });
     withDebounce(this.actionControl).subscribe(() => { this.paged.page.set(0); this.load(); });
+
+    // Date range fires only when both dates are filled or cleared
+    this.dateRangeGroup.valueChanges.pipe(
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe(({ start, end }) => {
+      if ((start && end) || (!start && !end)) {
+        this.paged.page.set(0);
+        this.load();
+      }
+    });
   }
 
   private async load(): Promise<void> {
     this.paged.loading.set(true);
+    const { start, end } = this.dateRangeGroup.value;
     const filters: AuditLogFilters = {
       action: this.actionControl.value?.trim() || undefined,
       userId: this.userIdControl.value?.trim() || undefined,
+      from: start ? toStartOfDay(start) : undefined,
+      to: end ? toEndOfDay(end) : undefined,
       excludeDevEvents: true,
     };
     try {
@@ -211,25 +163,25 @@ export class AuditLogsComponent implements OnInit {
     this.load();
   }
 
-  badgeClass(action: string): string {
-    return auditBadgeClass(action);
-  }
-
   exportCsv(): void {
     const rows = this.paged.rows();
     if (!rows.length) return;
     const header = 'timestamp,action,who,target,ipAddress';
-    const escape = (v: string | null | undefined) => `"${(v ?? '').replace(/"/g, '""')}"`;
     const lines = rows.map(l =>
-      [escape(l.timestamp), escape(l.action), escape(l.who), escape(l.target), escape(l.ipAddress)].join(','),
+      [csvEscape(l.timestamp), csvEscape(l.action), csvEscape(l.who), csvEscape(l.target), csvEscape(l.ipAddress)].join(','),
     );
-    const blob = new Blob([[header, ...lines].join('\n')], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadCsv(`audit-logs-${new Date().toISOString().slice(0, 10)}.csv`, [header, ...lines].join('\n'));
   }
+}
 
+function toStartOfDay(d: Date): string {
+  const copy = new Date(d);
+  copy.setHours(0, 0, 0, 0);
+  return copy.toISOString();
+}
+
+function toEndOfDay(d: Date): string {
+  const copy = new Date(d);
+  copy.setHours(23, 59, 59, 999);
+  return copy.toISOString();
 }
