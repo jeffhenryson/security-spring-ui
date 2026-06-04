@@ -67,20 +67,20 @@ const CONFIG_ITEMS: ConfigItem[] = [
           }
         </div>
       } @else {
-        @for (group of groups(); track group) {
+        @for (g of groupedItems(); track g.group) {
           <section class="flex flex-col gap-2">
             <h4 class="text-xs font-semibold uppercase tracking-widest text-[var(--text-secondary)] m-0 px-1">
-              {{ group }}
+              {{ g.group }}
             </h4>
-            @for (item of itemsByGroup(group); track item.key) {
+            @for (item of g.items; track item.key) {
               <div
                 class="flex items-center justify-between p-4 rounded-xl border bg-[var(--surface-color)] transition-colors"
-                [class]="isPending(item.key) ? 'border-amber-500/40' : 'border-[var(--border-color)]'"
+                [class]="item.isPending ? 'border-amber-500/40' : 'border-[var(--border-color)]'"
               >
                 <div class="flex flex-col gap-0.5 pr-4">
                   <div class="flex items-center gap-2">
                     <span class="text-sm font-medium text-[var(--text-primary)]">{{ item.label }}</span>
-                    @if (isPending(item.key)) {
+                    @if (item.isPending) {
                       <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30">
                         pendente
                       </span>
@@ -89,7 +89,7 @@ const CONFIG_ITEMS: ConfigItem[] = [
                   <span class="text-xs text-[var(--text-secondary)]">{{ item.description }}</span>
                 </div>
                 <mat-slide-toggle
-                  [checked]="pendingValue(item.key)"
+                  [checked]="item.value"
                   [disabled]="saving()"
                   (change)="markPending(item.key, $event.checked)"
                 />
@@ -115,20 +115,21 @@ export class SystemConfigComponent implements OnInit {
 
   readonly hasPending = computed(() => Object.keys(this._pending()).length > 0);
   readonly pendingCount = computed(() => Object.keys(this._pending()).length);
-  readonly groups = computed(() => [...new Set(CONFIG_ITEMS.map((i) => i.group))]);
 
-  itemsByGroup(group: string): ConfigItem[] {
-    return CONFIG_ITEMS.filter((i) => i.group === group);
-  }
-
-  isPending(key: string): boolean {
-    return key in this._pending();
-  }
-
-  pendingValue(key: string): boolean {
-    if (key in this._pending()) return this._pending()[key];
-    return (this.store.config()[key] ?? 'true') === 'true';
-  }
+  /** Estrutura por grupo com estado de pending e valor actual pré-calculados. */
+  readonly groupedItems = computed(() => {
+    const pending = this._pending();
+    const config = this.store.config();
+    const groups = [...new Set(CONFIG_ITEMS.map((i) => i.group))];
+    return groups.map((group) => ({
+      group,
+      items: CONFIG_ITEMS.filter((i) => i.group === group).map((item) => ({
+        ...item,
+        isPending: item.key in pending,
+        value: item.key in pending ? pending[item.key] : (config[item.key] ?? 'true') === 'true',
+      })),
+    }));
+  });
 
   markPending(key: string, value: boolean): void {
     const current = (this.store.config()[key] ?? 'true') === 'true';
