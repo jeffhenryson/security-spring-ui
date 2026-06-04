@@ -10,11 +10,9 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { AuthStore } from '../../../core/auth/auth.store';
 import { AuthService } from '../../../core/auth/auth.service';
 import { ProfileService } from '../../../core/profile/profile.service';
-import { passwordMatchValidator, passwordPolicyValidator } from '../../../core/validators/password.validators';
-import { PasswordStrengthComponent } from '../../../shared/password-strength/password-strength.component';
-import { ChangePasswordModalComponent, PasswordConfirmData } from './change-password-modal.component';
 import { ProfileAvatarSectionComponent } from './profile-avatar-section.component';
 import { PendingEmailBannerComponent } from './pending-email-banner.component';
+import { ProfilePasswordSectionComponent } from './profile-password-section.component';
 
 @Component({
   selector: 'app-profile',
@@ -27,10 +25,9 @@ import { PendingEmailBannerComponent } from './pending-email-banner.component';
     MatButtonModule,
     MatProgressSpinnerModule,
     MatIconModule,
-    PasswordStrengthComponent,
-    ChangePasswordModalComponent,
     ProfileAvatarSectionComponent,
     PendingEmailBannerComponent,
+    ProfilePasswordSectionComponent,
   ],
   template: `
     <div class="p-6 max-w-2xl mx-auto flex flex-col gap-6">
@@ -115,76 +112,7 @@ import { PendingEmailBannerComponent } from './pending-email-banner.component';
           </form>
         </section>
 
-        <!-- Trocar senha -->
-        <section class="bg-[var(--surface-color)] border border-[var(--border-color)] rounded-xl p-6">
-          <h3 class="text-base font-semibold text-[var(--text-primary)] mt-0 mb-5">Trocar senha</h3>
-
-          <form [formGroup]="passwordForm" (ngSubmit)="changePassword()" class="flex flex-col gap-4">
-            <mat-form-field appearance="outline">
-              <mat-label>Senha atual</mat-label>
-              <input matInput [type]="showCurrentPwd() ? 'text' : 'password'"
-                     formControlName="currentPassword" autocomplete="current-password" required />
-              <button mat-icon-button matSuffix type="button"
-                      (mousedown)="showCurrentPwd.set(true)" (mouseup)="showCurrentPwd.set(false)"
-                      (mouseleave)="showCurrentPwd.set(false)" aria-label="Mostrar senha atual">
-                <mat-icon class="!text-[18px]">{{ showCurrentPwd() ? 'visibility_off' : 'visibility' }}</mat-icon>
-              </button>
-              @if (passwordForm.get('currentPassword')?.hasError('required') && passwordForm.get('currentPassword')?.touched) {
-                <mat-error>Campo obrigatório</mat-error>
-              }
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>Nova senha</mat-label>
-              <input matInput [type]="showNewPwd() ? 'text' : 'password'"
-                     formControlName="newPassword" autocomplete="new-password" required />
-              <button mat-icon-button matSuffix type="button"
-                      (mousedown)="showNewPwd.set(true)" (mouseup)="showNewPwd.set(false)"
-                      (mouseleave)="showNewPwd.set(false)" aria-label="Mostrar nova senha">
-                <mat-icon class="!text-[18px]">{{ showNewPwd() ? 'visibility_off' : 'visibility' }}</mat-icon>
-              </button>
-              @if ((passwordForm.get('newPassword')?.hasError('minlength') || passwordForm.get('newPassword')?.hasError('passwordPolicy')) && passwordForm.get('newPassword')?.touched) {
-                <mat-error>Mínimo 8 caracteres com maiúscula, dígito e caractere especial</mat-error>
-              }
-            </mat-form-field>
-            <app-password-strength [password]="passwordForm.get('newPassword')?.value ?? null" />
-
-            <mat-form-field appearance="outline">
-              <mat-label>Confirmar nova senha</mat-label>
-              <input matInput [type]="showConfirmPwd() ? 'text' : 'password'"
-                     formControlName="confirmPassword" autocomplete="new-password" required />
-              <button mat-icon-button matSuffix type="button"
-                      (mousedown)="showConfirmPwd.set(true)" (mouseup)="showConfirmPwd.set(false)"
-                      (mouseleave)="showConfirmPwd.set(false)" aria-label="Mostrar confirmação">
-                <mat-icon class="!text-[18px]">{{ showConfirmPwd() ? 'visibility_off' : 'visibility' }}</mat-icon>
-              </button>
-            </mat-form-field>
-
-            @if (passwordForm.hasError('passwordMismatch') && passwordForm.get('confirmPassword')?.touched) {
-              <p class="text-red-400 text-sm -mt-2 m-0">As senhas não coincidem</p>
-            }
-            @if (passwordError()) {
-              <p class="text-red-400 text-sm m-0">{{ passwordError() }}</p>
-            }
-
-            <div class="flex justify-end">
-              <button mat-flat-button type="submit" [disabled]="savingPwd() || passwordForm.invalid">
-                @if (savingPwd()) { <mat-spinner diameter="18" class="mr-2" /> }
-                Alterar senha
-              </button>
-            </div>
-          </form>
-        </section>
-
-        @if (showPwdModal()) {
-          <app-change-password-modal
-            [totpEnabled]="totpEnabled()"
-            [loading]="pwdModalLoading()"
-            [error]="pwdModalError()"
-            (confirmed)="onPasswordModalConfirmed($event)"
-            (cancelled)="showPwdModal.set(false)"
-          />
-        }
+        <app-profile-password-section />
       }
     </div>
   `,
@@ -199,19 +127,10 @@ export class ProfileComponent {
   readonly loading = computed(() => this.store.currentUser() === null);
   readonly userInitials = this.store.userInitials;
   readonly pendingEmail = computed(() => this.store.currentUser()?.pendingEmail ?? '');
-  readonly totpEnabled = computed(() => !!this.store.currentUser()?.totpEnabled);
 
   readonly saving = signal(false);
   readonly profileError = signal('');
-  readonly savingPwd = signal(false);
   readonly showEmailPwd = signal(false);
-  readonly showCurrentPwd = signal(false);
-  readonly showNewPwd = signal(false);
-  readonly showConfirmPwd = signal(false);
-  readonly showPwdModal = signal(false);
-  readonly pwdModalLoading = signal(false);
-  readonly pwdModalError = signal('');
-  readonly passwordError = signal('');
 
   readonly profileForm = this.fb.nonNullable.group({
     username: [this.store.currentUser()?.username ?? '', Validators.required],
@@ -219,22 +138,14 @@ export class ProfileComponent {
     currentPassword: [''],
   });
 
-  readonly passwordForm = this.fb.nonNullable.group(
-    {
-      currentPassword: ['', Validators.required],
-      newPassword: ['', [Validators.required, passwordPolicyValidator]],
-      confirmPassword: ['', Validators.required],
-    },
-    { validators: passwordMatchValidator },
-  );
-
   constructor() {
     effect(() => {
       const u = this.store.currentUser();
       if (!u) return;
-      // Sempre sincroniza com o store para evitar race condition após login.
-      // emitEvent:false não dispara valueChanges, evitando marcar o form como dirty.
-      this.profileForm.patchValue({ username: u.username, email: u.email ?? '' }, { emitEvent: false });
+      // Só sincroniza se o form não foi tocado pelo usuário, evitando sobrescrever edições em andamento.
+      if (this.profileForm.pristine) {
+        this.profileForm.patchValue({ username: u.username, email: u.email ?? '' }, { emitEvent: false });
+      }
     });
   }
 
@@ -268,47 +179,6 @@ export class ProfileComponent {
       );
     } finally {
       this.saving.set(false);
-    }
-  }
-
-  changePassword(): void {
-    if (this.passwordForm.invalid) return;
-    if (this.totpEnabled()) {
-      this.pwdModalError.set('');
-      this.showPwdModal.set(true);
-    } else {
-      void this.executePasswordChange();
-    }
-  }
-
-  async onPasswordModalConfirmed(data: PasswordConfirmData): Promise<void> {
-    this.pwdModalLoading.set(true);
-    this.pwdModalError.set('');
-    await this.executePasswordChange(data.totpCode, data.revokeOtherSessions);
-    if (!this.pwdModalError()) {
-      this.showPwdModal.set(false);
-    }
-    this.pwdModalLoading.set(false);
-  }
-
-  private async executePasswordChange(totpCode?: string, revokeOtherSessions = false): Promise<void> {
-    this.savingPwd.set(true);
-    this.passwordError.set('');
-    const { currentPassword, newPassword } = this.passwordForm.getRawValue();
-    try {
-      await this.profileService.changePassword({ currentPassword, newPassword, totpCode, revokeOtherSessions });
-      this.passwordForm.reset();
-      this.snackBar.open('Senha alterada com sucesso!', 'OK', { duration: 3000 });
-    } catch (err) {
-      const msg = err instanceof HttpErrorResponse && (err.status === 401 || err.status === 403)
-        ? 'Senha atual incorreta.'
-        : err instanceof HttpErrorResponse && err.status === 400
-          ? 'Código 2FA inválido ou expirado.'
-          : 'Erro ao alterar senha. Tente novamente.';
-      this.passwordError.set(msg);
-      this.pwdModalError.set(msg);
-    } finally {
-      this.savingPwd.set(false);
     }
   }
 }

@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ProfileAvatarSectionComponent } from './profile-avatar-section.component';
 import { AvatarService } from '../../../core/auth/avatar.service';
@@ -7,7 +8,7 @@ import { ProfileService } from '../../../core/profile/profile.service';
 
 describe('ProfileAvatarSectionComponent', () => {
   let component: ProfileAvatarSectionComponent;
-  let avatarService: jest.Mocked<Pick<AvatarService, 'clearLocalAvatar' | 'setLocalAvatar'>>;
+  let avatarService: jest.Mocked<Pick<AvatarService, 'clearLocalAvatar' | 'setLocalAvatar'>> & { currentAvatar: ReturnType<typeof signal<string | null>> };
   let profileService: jest.Mocked<Pick<ProfileService, 'deleteAvatar' | 'uploadAvatar'>>;
   let authService: jest.Mocked<Pick<AuthService, 'loadCurrentUser'>>;
   let snackBar: jest.Mocked<Pick<MatSnackBar, 'open'>>;
@@ -19,6 +20,7 @@ describe('ProfileAvatarSectionComponent', () => {
     };
     authService = { loadCurrentUser: jest.fn().mockResolvedValue(undefined) };
     avatarService = {
+      currentAvatar: signal<string | null>(null),
       clearLocalAvatar: jest.fn(),
       setLocalAvatar: jest.fn(),
     };
