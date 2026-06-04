@@ -11,8 +11,6 @@ export type { AuditLogResponse };
 export interface AuditLogFilters {
   action?: string;
   userId?: string;
-  from?: string;
-  to?: string;
   excludeDevEvents?: boolean;
 }
 
@@ -25,8 +23,6 @@ export class AuditLogsService {
     const params: Record<string, string> = { page: String(page), size: String(size) };
     if (filters?.action) params['action'] = filters.action;
     if (filters?.userId) params['userId'] = filters.userId;
-    if (filters?.from) params['from'] = filters.from;
-    if (filters?.to) params['to'] = filters.to;
 
     const excludeDev = filters?.excludeDevEvents ?? false;
     return firstValueFrom(

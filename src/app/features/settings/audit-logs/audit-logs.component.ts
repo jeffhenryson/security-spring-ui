@@ -9,7 +9,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatDatepickerModule } from '@angular/material/datepicker';
 import { AuditLogsService, AuditLogResponse, AuditLogFilters } from '../../../core/admin/audit-logs.service';
 import { PagedState } from '../../../core/admin/paged-state';
 import { AUDIT_ACTION_COLORS, AUDIT_DEV_ONLY_EVENTS } from '../../../shared/audit-log.constants';
@@ -32,7 +31,6 @@ const KNOWN_ACTIONS = Object.keys(AUDIT_ACTION_COLORS)
     MatIconModule,
     MatButtonModule,
     MatTooltipModule,
-    MatDatepickerModule,
     AuditLogTableComponent,
   ],
   template: `
@@ -68,21 +66,6 @@ const KNOWN_ACTIONS = Object.keys(AUDIT_ACTION_COLORS)
             }
           </mat-select>
         </mat-form-field>
-
-        <mat-form-field appearance="outline" class="w-full !pb-0 sm:col-span-2">
-          <mat-label>Período</mat-label>
-          <mat-date-range-input [formGroup]="dateRangeGroup" [rangePicker]="picker">
-            <input matStartDate formControlName="start" placeholder="Data início" />
-            <input matEndDate formControlName="end" placeholder="Data fim" />
-          </mat-date-range-input>
-          <mat-datepicker-toggle matIconSuffix [for]="picker" />
-          <mat-date-range-picker #picker />
-          @if (hasDateFilter()) {
-            <button matSuffix mat-icon-button aria-label="Limpar datas" (click)="clearDateRange()">
-              <mat-icon class="!text-[18px]">close</mat-icon>
-            </button>
-          }
-        </mat-form-field>
       </div>
 
       <app-audit-log-table
@@ -107,15 +90,6 @@ export class AuditLogsComponent implements OnInit {
 
   readonly userIdControl = this.fb.control('');
   readonly actionControl = this.fb.control('');
-  readonly dateRangeGroup = this.fb.group({ start: [null as Date | null], end: [null as Date | null] });
-
-  hasDateFilter(): boolean {
-    return !!(this.dateRangeGroup.value.start || this.dateRangeGroup.value.end);
-  }
-
-  clearDateRange(): void {
-    this.dateRangeGroup.reset();
-  }
 
   ngOnInit(): void {
     this.paged.size.set(25);
@@ -126,26 +100,13 @@ export class AuditLogsComponent implements OnInit {
 
     withDebounce(this.userIdControl).subscribe(() => { this.paged.page.set(0); this.load(); });
     withDebounce(this.actionControl).subscribe(() => { this.paged.page.set(0); this.load(); });
-
-    // Date range fires only when both dates are filled or cleared
-    this.dateRangeGroup.valueChanges.pipe(
-      takeUntilDestroyed(this.destroyRef),
-    ).subscribe(({ start, end }) => {
-      if ((start && end) || (!start && !end)) {
-        this.paged.page.set(0);
-        this.load();
-      }
-    });
   }
 
   private async load(): Promise<void> {
     this.paged.loading.set(true);
-    const { start, end } = this.dateRangeGroup.value;
     const filters: AuditLogFilters = {
       action: this.actionControl.value?.trim() || undefined,
       userId: this.userIdControl.value?.trim() || undefined,
-      from: start ? toStartOfDay(start) : undefined,
-      to: end ? toEndOfDay(end) : undefined,
       excludeDevEvents: true,
     };
     try {
@@ -174,14 +135,3 @@ export class AuditLogsComponent implements OnInit {
   }
 }
 
-function toStartOfDay(d: Date): string {
-  const copy = new Date(d);
-  copy.setHours(0, 0, 0, 0);
-  return copy.toISOString();
-}
-
-function toEndOfDay(d: Date): string {
-  const copy = new Date(d);
-  copy.setHours(23, 59, 59, 999);
-  return copy.toISOString();
-}

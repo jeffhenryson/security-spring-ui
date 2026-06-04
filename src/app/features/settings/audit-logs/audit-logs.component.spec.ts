@@ -49,7 +49,7 @@ describe('AuditLogsComponent', () => {
   it('carrega logs de auditoria no ngOnInit com pageSize=25', () => {
     expect(component.paged.size()).toBe(25);
     expect(auditLogsService.list).toHaveBeenCalledWith(0, 25, {
-      action: undefined, userId: undefined, from: undefined, to: undefined, excludeDevEvents: true,
+      action: undefined, userId: undefined, excludeDevEvents: true,
     });
     expect(component.paged.rows()).toEqual([MOCK_ENTRY]);
     expect(component.paged.total()).toBe(1);
@@ -84,7 +84,7 @@ describe('AuditLogsComponent', () => {
     expect(component.paged.page()).toBe(1);
     expect(component.paged.size()).toBe(50);
     expect(auditLogsService.list).toHaveBeenCalledWith(1, 50, {
-      action: undefined, userId: undefined, from: undefined, to: undefined, excludeDevEvents: true,
+      action: undefined, userId: undefined, excludeDevEvents: true,
     });
   });
 
@@ -99,7 +99,7 @@ describe('AuditLogsComponent', () => {
     expect(auditLogsService.list).toHaveBeenCalledWith(
       expect.any(Number),
       expect.any(Number),
-      { action: undefined, userId: 'alice', from: undefined, to: undefined, excludeDevEvents: true },
+      { action: undefined, userId: 'alice', excludeDevEvents: true },
     );
   });
 
@@ -112,7 +112,7 @@ describe('AuditLogsComponent', () => {
     expect(auditLogsService.list).toHaveBeenCalledWith(
       expect.any(Number),
       expect.any(Number),
-      { action: 'USER_CREATED', userId: undefined, from: undefined, to: undefined, excludeDevEvents: true },
+      { action: 'USER_CREATED', userId: undefined, excludeDevEvents: true },
     );
   });
 
@@ -126,7 +126,7 @@ describe('AuditLogsComponent', () => {
     expect(auditLogsService.list).toHaveBeenCalledWith(
       expect.any(Number),
       expect.any(Number),
-      { action: undefined, userId: undefined, from: undefined, to: undefined, excludeDevEvents: true },
+      { action: undefined, userId: undefined, excludeDevEvents: true },
     );
   });
 
