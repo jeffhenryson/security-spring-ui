@@ -1,11 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { firstValueFrom, debounceTime, distinctUntilChanged } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSelectModule } from '@angular/material/select';
-import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -23,21 +18,14 @@ import { CreateUserDialogComponent } from './dialogs/create-user.dialog';
 import { EditUserDialogComponent } from './dialogs/edit-user.dialog';
 import { ManageRolesDialogComponent } from './dialogs/manage-roles.dialog';
 import { UserTableComponent } from './user-table.component';
+import { UsersFilterBarComponent, UserFilter } from './users-filter-bar.component';
+import { downloadCsv, csvEscape } from '../../../shared/csv-export';
 
 @Component({
   selector: 'app-users',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    ReactiveFormsModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    MatButtonModule,
-    MatIconModule,
-    MatTooltipModule,
-    UserTableComponent,
-  ],
+  imports: [MatButtonModule, MatIconModule, MatTooltipModule, UserTableComponent, UsersFilterBarComponent],
   template: `
     <div class="p-6 max-w-5xl mx-auto flex flex-col gap-6">
       <div class="flex items-center justify-between">
@@ -54,21 +42,7 @@ import { UserTableComponent } from './user-table.component';
         </div>
       </div>
 
-      <div class="flex flex-wrap gap-3">
-        <mat-form-field appearance="outline" class="flex-1 min-w-[200px] !pb-0">
-          <mat-label>Buscar por nome ou email</mat-label>
-          <mat-icon matPrefix class="!text-[var(--text-secondary)]">search</mat-icon>
-          <input matInput [formControl]="searchControl" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="w-40 !pb-0">
-          <mat-label>Status</mat-label>
-          <mat-select [formControl]="statusControl">
-            <mat-option value="">Todos</mat-option>
-            <mat-option value="active">Ativo</mat-option>
-            <mat-option value="inactive">Inativo</mat-option>
-          </mat-select>
-        </mat-form-field>
-      </div>
+      <app-users-filter-bar (filterChange)="onFilterChange($event)" />
 
       <app-user-table
         [rows]="paged.rows()"
@@ -100,7 +74,6 @@ export class UsersComponent implements OnInit {
   private readonly store = inject(AuthStore);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
-  private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly paged = new PagedState<User>();
@@ -109,6 +82,7 @@ export class UsersComponent implements OnInit {
   readonly sortDir = signal<'asc' | 'desc'>('asc');
   readonly skeletonRows = Array(10).fill(0);
   readonly highlightedId = signal<number | null>(null);
+  private readonly activeFilter = signal<UserFilter>({ search: '', status: '' });
   private highlightTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
@@ -116,9 +90,6 @@ export class UsersComponent implements OnInit {
       if (this.highlightTimer !== null) clearTimeout(this.highlightTimer);
     });
   }
-
-  readonly searchControl = this.fb.control('');
-  readonly statusControl = this.fb.control('');
 
   readonly canCreate = computed(() => this.store.hasPermission(PERMISSIONS.USER_CREATE));
   readonly canUpdate = computed(() => this.store.hasPermission(PERMISSIONS.USER_UPDATE));
@@ -136,18 +107,12 @@ export class UsersComponent implements OnInit {
   ngOnInit(): void {
     this.load();
     this.loadRoles();
-    this.searchControl.valueChanges
-      .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => {
-        this.paged.page.set(0);
-        this.load();
-      });
-    this.statusControl.valueChanges
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => {
-        this.paged.page.set(0);
-        this.load();
-      });
+  }
+
+  onFilterChange(filter: UserFilter): void {
+    this.activeFilter.set(filter);
+    this.paged.page.set(0);
+    this.load();
   }
 
   private async loadRoles(): Promise<void> {
@@ -174,8 +139,7 @@ export class UsersComponent implements OnInit {
 
   private async load(): Promise<void> {
     this.paged.loading.set(true);
-    const search = this.searchControl.value?.trim() ?? '';
-    const status = this.statusControl.value ?? '';
+    const { search, status } = this.activeFilter();
     const filters = {
       ...(search ? { search } : {}),
       ...(status ? { enabled: status === 'active' } : {}),
@@ -208,14 +172,10 @@ export class UsersComponent implements OnInit {
   }
 
   async openCreate(): Promise<void> {
-    // ROLE_DEV nunca aparece na área de administração — apenas em dev-users
     const availableRoles = this.allRoles().filter((r) => r !== ROLES.ROLE_DEV);
     const data = await firstValueFrom(
       this.dialog
-        .open(CreateUserDialogComponent, {
-          width: 'min(480px, 95vw)',
-          data: { availableRoles },
-        })
+        .open(CreateUserDialogComponent, { width: 'min(480px, 95vw)', data: { availableRoles } })
         .afterClosed(),
     );
     if (!data) return;
@@ -288,8 +248,11 @@ export class UsersComponent implements OnInit {
       this.dialog
         .open(ManageRolesDialogComponent, {
           width: 'min(480px, 95vw)',
-          // ROLE_DEV nunca aparece na área de administração — apenas em dev-users
-          data: { username: user.username, currentRoles: user.roles, allRoles: this.allRoles().filter((r) => r !== ROLES.ROLE_DEV) },
+          data: {
+            username: user.username,
+            currentRoles: user.roles,
+            allRoles: this.allRoles().filter((r) => r !== ROLES.ROLE_DEV),
+          },
         })
         .afterClosed(),
     );
@@ -332,15 +295,8 @@ export class UsersComponent implements OnInit {
     const header = 'id,username,email,status,roles';
     const lines = rows.map(
       (u) =>
-        `${u.id},"${u.username}","${u.email}",${u.enabled ? 'ativo' : 'inativo'},"${u.roles.join(';')}"`,
+        `${u.id},${csvEscape(u.username)},${csvEscape(u.email)},${u.enabled ? 'ativo' : 'inativo'},${csvEscape(u.roles.join(';'))}`,
     );
-    const csv = [header, ...lines].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `usuarios-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadCsv(`usuarios-${new Date().toISOString().slice(0, 10)}.csv`, [header, ...lines].join('\n'));
   }
 }
