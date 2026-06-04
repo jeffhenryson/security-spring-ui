@@ -35,6 +35,7 @@ describe('DevSystemComponent', () => {
     fixture.detectChanges();
     // Drena requests abertos pelo ngOnInit para não contaminar testes seguintes
     controller.match(`${API}/actuator/health`);
+    controller.match(`${API}/system/info`);
   });
 
   afterEach(() => controller.verify());
@@ -50,6 +51,7 @@ describe('DevSystemComponent', () => {
   it('seta health corretamente após resposta bem-sucedida', async () => {
     component.refresh();
     controller.expectOne(`${API}/actuator/health`).flush(MOCK_HEALTH);
+    controller.match(`${API}/system/info`);
     await Promise.resolve();
     expect(component.health()).toEqual(MOCK_HEALTH);
   });
@@ -59,6 +61,7 @@ describe('DevSystemComponent', () => {
     controller
       .expectOne(`${API}/actuator/health`)
       .flush('Error', { status: 500, statusText: 'Server Error' });
+    controller.match(`${API}/system/info`);
     await Promise.resolve();
     expect(component.health()).toBeNull();
   });

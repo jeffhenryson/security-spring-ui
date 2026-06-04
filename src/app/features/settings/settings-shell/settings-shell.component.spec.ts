@@ -27,7 +27,9 @@ function makeStore(roles: string[] = [], elevated = false, totpEnabled = false) 
   const isAdmin = roles.some((r) => r === 'ADMIN' || r === 'ROLE_ADMIN');
   const perms = isAdmin ? ['USER_READ', 'ROLE_READ', 'AUDIT_READ'] : [];
   return {
-    hasRole: jest.fn((role: string) => roles.includes(role)),
+    hasRole: jest.fn((role: string) =>
+      roles.includes(role) || (isAdmin && role === 'ROLE_ADMIN'),
+    ),
     hasPermission: jest.fn(() => isAdmin),
     permissions: jest.fn(() => perms),
     isDevElevated: signal(elevated),

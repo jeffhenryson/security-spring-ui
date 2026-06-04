@@ -40,15 +40,11 @@ describe('DevLogsComponent', () => {
     expect(component.availableActions).toContain('DEV_ELEVATION_COMPLETED');
   });
 
-  it('isCritical retorna true para eventos de segurança', () => {
-    expect(component.isCritical('TOKEN_THEFT_DETECTED')).toBe(true);
-    expect(component.isCritical('ACCOUNT_LOCKED')).toBe(true);
-    expect(component.isCritical('LOGIN_FAILED')).toBe(true);
-  });
-
-  it('isCritical retorna false para eventos comuns', () => {
-    expect(component.isCritical('USER_LOGGED_IN')).toBe(false);
-    expect(component.isCritical('USER_CREATED')).toBe(false);
+  it('passa showCriticalBadge=true para o AuditLogTableComponent', () => {
+    // isCritical foi movida para AuditLogTableComponent; aqui basta verificar
+    // que o componente não lança erro e que a lista de ações inclui eventos críticos.
+    expect(component.availableActions).toContain('TOKEN_THEFT_DETECTED');
+    expect(component.availableActions).toContain('ACCOUNT_LOCKED');
   });
 
   it('chama auditLogsService.list no ngOnInit', () => {

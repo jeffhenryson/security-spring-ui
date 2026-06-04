@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -134,9 +134,9 @@ import { DateFormatPipe } from '../../shared/date-format.pipe';
             <p class="text-[var(--text-muted)] text-sm text-center py-6">Nenhuma atividade registrada.</p>
           } @else {
             <div class="divide-y divide-[var(--border-color)]">
-              @for (log of recentActivity(); track log.id) {
+              @for (log of recentActivityWithBadge(); track log.id) {
                 <div class="flex items-center gap-3 px-4 py-3">
-                  <span class="px-2 py-0.5 rounded text-xs font-mono font-medium shrink-0 {{ badge(log.action) }}">
+                  <span class="px-2 py-0.5 rounded text-xs font-mono font-medium shrink-0 {{ log.badgeClass }}">
                     {{ log.action }}
                   </span>
                   <span class="text-[var(--text-secondary)] text-sm truncate flex-1">{{ log.who }}</span>
@@ -167,12 +167,16 @@ export class DashboardAdminSectionComponent {
 
   readonly retryStats = output<void>();
 
-  badge(action: string): string {
-    if (/DELETED|REMOVED|LOCKED|THEFT|FAILED|DISABLED/.test(action)) return 'bg-red-950 text-red-300';
-    if (/CREATED|ENABLED|VERIFIED|REGISTERED|ASSIGNED|CONFIRMED|COMPLETED/.test(action)) return 'bg-green-950 text-green-300';
-    if (/LOGGED_IN|LOGGED_OUT|SESSIONS/.test(action)) return 'bg-blue-950 text-blue-300';
-    if (/TOTP|BACKUP/.test(action)) return 'bg-teal-950 text-teal-300';
-    if (/RESET|PASSWORD|CHANGE|EMAIL/.test(action)) return 'bg-yellow-950 text-yellow-300';
-    return 'bg-[var(--surface-hover)] text-[var(--text-primary)]';
-  }
+  readonly recentActivityWithBadge = computed(() =>
+    this.recentActivity().map((log) => ({ ...log, badgeClass: badgeFor(log.action) })),
+  );
+}
+
+export function badgeFor(action: string): string {
+  if (/TOTP|BACKUP/.test(action)) return 'bg-teal-950 text-teal-300';
+  if (/DELETED|REMOVED|LOCKED|THEFT|FAILED|DISABLED/.test(action)) return 'bg-red-950 text-red-300';
+  if (/CREATED|ENABLED|VERIFIED|REGISTERED|ASSIGNED|CONFIRMED|COMPLETED/.test(action)) return 'bg-green-950 text-green-300';
+  if (/LOGGED_IN|LOGGED_OUT|SESSIONS/.test(action)) return 'bg-blue-950 text-blue-300';
+  if (/RESET|PASSWORD|CHANGE|EMAIL/.test(action)) return 'bg-yellow-950 text-yellow-300';
+  return 'bg-[var(--surface-hover)] text-[var(--text-primary)]';
 }

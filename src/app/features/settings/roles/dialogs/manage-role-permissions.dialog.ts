@@ -38,10 +38,10 @@ const DEV_ONLY_PERMISSIONS = new Set(['DEV_ROLE_MANAGE', 'DEV_PERMISSION_MANAGE'
         @if (role().permissions.length === 0) {
           <span class="text-[var(--text-muted)] text-sm">Nenhuma permissão</span>
         }
-        @for (perm of role().permissions; track perm) {
-          <mat-chip [removable]="canRemove(perm)" (removed)="removePerm(perm)">
-            {{ perm }}
-            @if (canRemove(perm)) {
+        @for (item of permissionsWithFlags(); track item.perm) {
+          <mat-chip [removable]="item.removable" (removed)="removePerm(item.perm)">
+            {{ item.perm }}
+            @if (item.removable) {
               <button matChipRemove><mat-icon>cancel</mat-icon></button>
             }
           </mat-chip>
@@ -94,11 +94,17 @@ export class ManageRolePermissionsDialogComponent {
     const base = this.allPermissions().filter((p) => !this.role().permissions.includes(p));
     return this.canManageDev() ? base : base.filter((p) => !DEV_ONLY_PERMISSIONS.has(p));
   });
+  readonly permissionsWithFlags = computed(() => {
+    const manage = this.canManage();
+    const manageDev = this.canManageDev();
+    return this.role().permissions.map((perm) => ({
+      perm,
+      removable: manage && !(DEV_ONLY_PERMISSIONS.has(perm) && !manageDev),
+    }));
+  });
 
   canRemove(perm: string): boolean {
-    if (!this.canManage()) return false;
-    if (DEV_ONLY_PERMISSIONS.has(perm) && !this.canManageDev()) return false;
-    return true;
+    return this.permissionsWithFlags().find((f) => f.perm === perm)?.removable ?? false;
   }
 
   async addPerm(): Promise<void> {

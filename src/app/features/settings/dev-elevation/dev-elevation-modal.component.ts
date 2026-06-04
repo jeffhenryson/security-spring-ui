@@ -186,6 +186,10 @@ export class DevElevationModalComponent {
 
   private step2Timer: ReturnType<typeof setInterval> | null = null;
 
+  constructor() {
+    this.destroyRef.onDestroy(() => this.stopStep2Timer());
+  }
+
   onBackdropClick(): void {
     if (!this.loading()) this.dismissed.emit();
   }
@@ -241,7 +245,6 @@ export class DevElevationModalComponent {
       this.step2SecondsLeft.set(left);
       if (left <= 0) this.stopStep2Timer();
     }, 1000);
-    this.destroyRef.onDestroy(() => this.stopStep2Timer());
   }
 
   private stopStep2Timer(): void {
