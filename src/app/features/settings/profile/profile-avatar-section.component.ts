@@ -3,7 +3,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AvatarService } from '../../../core/auth/avatar.service';
-import { AuthService } from '../../../core/auth/auth.service';
+import { AuthStore } from '../../../core/auth/auth.store';
 import { ProfileService } from '../../../core/profile/profile.service';
 
 @Component({
@@ -66,8 +66,8 @@ export class ProfileAvatarSectionComponent {
   private readonly fileInput = viewChild.required<ElementRef<HTMLInputElement>>('fileInput');
 
   private readonly avatarService = inject(AvatarService);
+  private readonly store = inject(AuthStore);
   private readonly profileService = inject(ProfileService);
-  private readonly authService = inject(AuthService);
   private readonly snackBar = inject(MatSnackBar);
 
   readonly userInitials = input.required<string>();
@@ -81,12 +81,17 @@ export class ProfileAvatarSectionComponent {
   }
 
   triggerFileInput(): void {
-    this.fileInput.nativeElement.click();
+    this.fileInput().nativeElement.click();
   }
 
   onFileSelected(event: Event): void {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      this.snackBar.open('Apenas arquivos de imagem são aceitos.', 'Fechar', { duration: 4000 });
+      (event.target as HTMLInputElement).value = '';
+      return;
+    }
     if (file.size > 2 * 1024 * 1024) {
       this.snackBar.open('Imagem muito grande. O tamanho máximo é 2 MB.', 'Fechar', { duration: 4000 });
       (event.target as HTMLInputElement).value = '';
@@ -111,8 +116,9 @@ export class ProfileAvatarSectionComponent {
           // Cache local imediato para UX responsiva enquanto o upload processa.
           this.avatarService.setLocalAvatar(canvas.toDataURL('image/jpeg', 0.85));
           try {
-            await this.profileService.uploadAvatar(blob);
-            await this.authService.loadCurrentUser();
+            const { avatarUrl } = await this.profileService.uploadAvatar(blob);
+            const current = this.store.currentUser();
+            if (current) this.store.setCurrentUser({ ...current, avatarUrl });
             this.snackBar.open('Foto atualizada!', 'OK', { duration: 2500 });
           } catch {
             this.avatarService.clearLocalAvatar();
@@ -130,7 +136,8 @@ export class ProfileAvatarSectionComponent {
     try {
       await this.profileService.deleteAvatar();
       this.avatarService.clearLocalAvatar();
-      await this.authService.loadCurrentUser();
+      const current = this.store.currentUser();
+      if (current) this.store.setCurrentUser({ ...current, avatarUrl: null });
       this.snackBar.open('Foto removida.', 'OK', { duration: 2500 });
     } catch {
       this.snackBar.open('Erro ao remover foto. Tente novamente.', 'Fechar', { duration: 4000 });

@@ -8,7 +8,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthStore } from '../../../core/auth/auth.store';
-import { AuthService } from '../../../core/auth/auth.service';
 import { ProfileService } from '../../../core/profile/profile.service';
 import { ProfileAvatarSectionComponent } from './profile-avatar-section.component';
 import { PendingEmailBannerComponent } from './pending-email-banner.component';
@@ -119,7 +118,6 @@ import { ProfilePasswordSectionComponent } from './profile-password-section.comp
 })
 export class ProfileComponent {
   private readonly store = inject(AuthStore);
-  private readonly authService = inject(AuthService);
   private readonly profileService = inject(ProfileService);
   private readonly fb = inject(FormBuilder);
   private readonly snackBar = inject(MatSnackBar);
@@ -154,7 +152,9 @@ export class ProfileComponent {
     this.saving.set(true);
     this.profileError.set('');
     try {
-      await this.profileService.updateProfile(this.profileForm.getRawValue());
+      const updated = await this.profileService.updateProfile(this.profileForm.getRawValue());
+      const current = this.store.currentUser();
+      this.store.setCurrentUser({ ...current, ...updated });
     } catch (err) {
       if (err instanceof HttpErrorResponse && (err.status === 401 || err.status === 403)) {
         this.profileError.set('Senha atual incorreta.');
@@ -169,16 +169,6 @@ export class ProfileComponent {
     this.profileForm.patchValue({ currentPassword: '' });
     this.profileForm.get('currentPassword')?.markAsUntouched();
     this.snackBar.open('Perfil atualizado!', 'OK', { duration: 3000 });
-    try {
-      await this.authService.loadCurrentUser();
-    } catch {
-      this.snackBar.open(
-        'Perfil salvo, mas os dados exibidos podem estar desatualizados. Recarregue a página.',
-        'OK',
-        { duration: 5000 },
-      );
-    } finally {
-      this.saving.set(false);
-    }
+    this.saving.set(false);
   }
 }

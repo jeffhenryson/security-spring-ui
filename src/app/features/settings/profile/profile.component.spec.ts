@@ -3,7 +3,6 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ProfileComponent } from './profile.component';
 import { AuthStore } from '../../../core/auth/auth.store';
-import { AuthService } from '../../../core/auth/auth.service';
 import { ProfileService } from '../../../core/profile/profile.service';
 import { CurrentUser } from '../../../core/auth/models/auth.models';
 
@@ -19,27 +18,26 @@ const MOCK_USER: CurrentUser = {
   permissions: [],
 };
 
+const UPDATED_USER = { ...MOCK_USER, username: 'alice2' };
+
 describe('ProfileComponent', () => {
   let component: ProfileComponent;
   let store: AuthStore;
   let profileService: jest.Mocked<ProfileService>;
-  let authService: jest.Mocked<Pick<AuthService, 'loadCurrentUser'>>;
   let snackBar: jest.Mocked<Pick<MatSnackBar, 'open'>>;
 
   beforeEach(async () => {
     profileService = {
-      updateProfile: jest.fn().mockResolvedValue(undefined),
+      updateProfile: jest.fn().mockResolvedValue(UPDATED_USER),
       changePassword: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<ProfileService>;
 
-    authService = { loadCurrentUser: jest.fn().mockResolvedValue(undefined) };
     snackBar = { open: jest.fn() };
 
     await TestBed.configureTestingModule({
       imports: [ProfileComponent],
       providers: [
         { provide: ProfileService, useValue: profileService },
-        { provide: AuthService, useValue: authService },
         { provide: MatSnackBar, useValue: snackBar },
       ],
     })
@@ -73,18 +71,18 @@ describe('ProfileComponent', () => {
   // ── saveProfile ───────────────────────────────────────────────────────────
 
   describe('saveProfile', () => {
-    it('chama updateProfile e exibe snackbar de sucesso', async () => {
+    it('chama updateProfile e atualiza o store com o response', async () => {
       await component.saveProfile();
       expect(profileService.updateProfile).toHaveBeenCalledWith(
         expect.objectContaining({ username: 'alice', email: 'alice@example.com' }),
       );
-      expect(snackBar.open).toHaveBeenCalledWith('Perfil atualizado!', 'OK', { duration: 3000 });
-      expect(component.saving()).toBe(false);
+      expect(store.currentUser()?.username).toBe('alice2');
     });
 
-    it('chama loadCurrentUser após salvar com sucesso', async () => {
+    it('exibe snackbar de sucesso e limpa saving', async () => {
       await component.saveProfile();
-      expect(authService.loadCurrentUser).toHaveBeenCalled();
+      expect(snackBar.open).toHaveBeenCalledWith('Perfil atualizado!', 'OK', { duration: 3000 });
+      expect(component.saving()).toBe(false);
     });
 
     it('define profileError "Senha atual incorreta." para 401', async () => {
