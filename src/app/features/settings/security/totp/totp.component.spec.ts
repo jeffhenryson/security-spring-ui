@@ -32,6 +32,7 @@ describe('TotpComponent', () => {
 
   beforeEach(async () => {
     securityService = {
+      loadTotpStatus: jest.fn().mockResolvedValue({ enabled: false, backupCodesRemaining: 0 }),
       startTotpSetup: jest.fn().mockResolvedValue({ secret: 'ABCD', otpauthUri: 'otpauth://...' }),
       confirmTotpSetup: jest.fn().mockResolvedValue({ backupCodes: ['code1', 'code2'] }),
       disableTotp: jest.fn().mockResolvedValue(undefined),
@@ -97,12 +98,8 @@ describe('TotpComponent', () => {
   });
 
   describe('confirmSetup', () => {
-    beforeEach(() => {
-      component.confirmForm.setValue({ code: '123456' });
-    });
-
     it('muda a view para "backup-codes" e define os códigos', async () => {
-      await component.confirmSetup();
+      await component.confirmSetup('123456');
       expect(securityService.confirmTotpSetup).toHaveBeenCalledWith('123456');
       expect(component.view()).toBe('backup-codes');
       expect(component.backupCodes()).toEqual(['code1', 'code2']);
@@ -110,7 +107,7 @@ describe('TotpComponent', () => {
     });
 
     it('exibe snackbar de sucesso ao confirmar 2FA', async () => {
-      await component.confirmSetup();
+      await component.confirmSetup('123456');
       expect(snackBar.open).toHaveBeenCalledWith('2FA habilitado com sucesso!', 'OK', {
         duration: 3000,
       });
@@ -118,28 +115,22 @@ describe('TotpComponent', () => {
 
     it('define error para código inválido', async () => {
       securityService.confirmTotpSetup.mockRejectedValue(new Error('invalid'));
-      await component.confirmSetup();
+      await component.confirmSetup('123456');
       expect(component.error()).toBe('Código inválido ou expirado. Tente novamente.');
     });
 
-    it('não chama confirmTotpSetup se o form for inválido', async () => {
-      component.confirmForm.setValue({ code: '' });
-      await component.confirmSetup();
-      expect(securityService.confirmTotpSetup).not.toHaveBeenCalled();
+    it('passa o código correto para confirmTotpSetup', async () => {
+      await component.confirmSetup('654321');
+      expect(securityService.confirmTotpSetup).toHaveBeenCalledWith('654321');
     });
   });
 
   describe('disableTotp', () => {
-    beforeEach(() => {
-      component.disableForm.setValue({ currentPassword: 'pass123', code: '654321' });
-    });
+    const DATA = { currentPassword: 'pass123', code: '654321' };
 
     it('desabilita 2FA, reseta view e exibe snackbar', async () => {
-      await component.disableTotp();
-      expect(securityService.disableTotp).toHaveBeenCalledWith({
-        currentPassword: 'pass123',
-        code: '654321',
-      });
+      await component.disableTotp(DATA);
+      expect(securityService.disableTotp).toHaveBeenCalledWith(DATA);
       expect(component.view()).toBe('idle');
       expect(snackBar.open).toHaveBeenCalledWith('2FA desabilitado.', 'OK', { duration: 3000 });
       expect(component.loading()).toBe(false);
@@ -147,24 +138,20 @@ describe('TotpComponent', () => {
 
     it('define error "Senha ou código inválido." para 401', async () => {
       securityService.disableTotp.mockRejectedValue(new HttpErrorResponse({ status: 401 }));
-      await component.disableTotp();
+      await component.disableTotp(DATA);
       expect(component.error()).toBe('Senha ou código inválido.');
     });
 
     it('define error genérico para outros erros', async () => {
       securityService.disableTotp.mockRejectedValue(new Error('network'));
-      await component.disableTotp();
+      await component.disableTotp(DATA);
       expect(component.error()).toBe('Erro ao desabilitar. Tente novamente.');
     });
   });
 
   describe('confirmRegenBackupCodes', () => {
-    beforeEach(() => {
-      component.regenForm.setValue({ currentPassword: 'myPass123' });
-    });
-
     it('define novos backup codes e muda a view para "backup-codes"', async () => {
-      await component.confirmRegenBackupCodes();
+      await component.confirmRegenBackupCodes('myPass123');
       expect(securityService.regenerateBackupCodes).toHaveBeenCalledWith('myPass123');
       expect(component.backupCodes()).toEqual(['new1', 'new2']);
       expect(component.view()).toBe('backup-codes');
@@ -178,20 +165,19 @@ describe('TotpComponent', () => {
       securityService.regenerateBackupCodes.mockRejectedValue(
         new HttpErrorResponse({ status: 401 }),
       );
-      await component.confirmRegenBackupCodes();
+      await component.confirmRegenBackupCodes('myPass123');
       expect(component.error()).toBe('Senha incorreta.');
     });
 
     it('define error genérico para outros erros', async () => {
       securityService.regenerateBackupCodes.mockRejectedValue(new Error('fail'));
-      await component.confirmRegenBackupCodes();
+      await component.confirmRegenBackupCodes('myPass123');
       expect(component.error()).toBe('Erro ao regenerar backup codes. Tente novamente.');
     });
 
-    it('não chama o serviço se o form for inválido', async () => {
-      component.regenForm.setValue({ currentPassword: '' });
-      await component.confirmRegenBackupCodes();
-      expect(securityService.regenerateBackupCodes).not.toHaveBeenCalled();
+    it('passa a senha correta para o serviço', async () => {
+      await component.confirmRegenBackupCodes('outraSenha');
+      expect(securityService.regenerateBackupCodes).toHaveBeenCalledWith('outraSenha');
     });
   });
 });
