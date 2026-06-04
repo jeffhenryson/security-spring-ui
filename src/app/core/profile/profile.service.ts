@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { ApiConfiguration } from '../../api/api-configuration';
 import { UserUpdateRequest } from '../../api/models/user-update-request';
 import { ChangePasswordRequest } from '../../api/models/change-password-request';
+import { UserResponse } from '../../api/models/user-response';
 
 export type { UserUpdateRequest, ChangePasswordRequest };
 
@@ -12,18 +13,18 @@ export class ProfileService {
   private readonly http = inject(HttpClient);
   private readonly config = inject(ApiConfiguration);
 
-  updateProfile(data: UserUpdateRequest): Promise<void> {
-    return firstValueFrom(this.http.patch<void>(`${this.config.rootUrl}/users/me`, data));
+  updateProfile(data: UserUpdateRequest): Promise<UserResponse> {
+    return firstValueFrom(this.http.patch<UserResponse>(`${this.config.rootUrl}/users/me`, data));
   }
 
   changePassword(data: ChangePasswordRequest): Promise<void> {
     return firstValueFrom(this.http.put<void>(`${this.config.rootUrl}/users/me/password`, data));
   }
 
-  uploadAvatar(file: Blob): Promise<void> {
+  uploadAvatar(file: Blob): Promise<{ avatarUrl: string }> {
     const form = new FormData();
     form.append('file', file, 'avatar.jpg');
-    return firstValueFrom(this.http.post<void>(`${this.config.rootUrl}/users/me/avatar`, form));
+    return firstValueFrom(this.http.post<{ avatarUrl: string }>(`${this.config.rootUrl}/users/me/avatar`, form));
   }
 
   deleteAvatar(): Promise<void> {
