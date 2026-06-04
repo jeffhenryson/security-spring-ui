@@ -3,6 +3,7 @@ import { provideRouter, TitleStrategy, withPreloading } from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideHttpClient, withInterceptors, withXsrfConfiguration } from '@angular/common/http';
 import { MAT_SNACK_BAR_DEFAULT_OPTIONS } from '@angular/material/snack-bar';
+import { provideNativeDateAdapter } from '@angular/material/core';
 import { createErrorHandler } from '@sentry/angular';
 import { routes } from './app.routes';
 import { authInterceptor } from './core/auth/auth.interceptor';
@@ -31,6 +32,7 @@ function initAppConfig(configService: AppConfigService) {
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZonelessChangeDetection(),
+    provideNativeDateAdapter(),
     provideApiConfiguration(environment.apiUrl),
     provideRouter(routes, withPreloading(PermissionPreloadStrategy)),
     { provide: TitleStrategy, useClass: AppTitleStrategy },

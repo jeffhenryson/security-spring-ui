@@ -19,13 +19,12 @@ export class AppConfigService {
     this.store.setConfig(result);
   }
 
+  // Não silencia erros — o componente precisa saber quando a carga falhou.
   async loadAll(): Promise<void> {
     const result = await firstValueFrom(
-      this.http
-        .get<Record<string, string>>(`${this.config.rootUrl}/system/config`)
-        .pipe(catchError(() => of({} as Record<string, string>))),
+      this.http.get<Record<string, string>>(`${this.config.rootUrl}/system/config`),
     );
-    if (Object.keys(result).length > 0) this.store.setConfig(result);
+    this.store.setConfig(result);
   }
 
   async set(key: string, value: string): Promise<void> {

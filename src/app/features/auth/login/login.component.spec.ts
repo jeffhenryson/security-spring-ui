@@ -75,7 +75,7 @@ describe('LoginComponent', () => {
     component.form.setValue({ username: 'alice', password: 'secret' });
     await component.onSubmit();
     expect(authService.setPendingChallengeToken).toHaveBeenCalledWith('chal-xyz');
-    expect(router.navigate).toHaveBeenCalledWith(['/auth/2fa']);
+    expect(router.navigate).toHaveBeenCalledWith(['/auth/2fa'], {});
   });
 
   it('define errorMsg e não redireciona em caso de falha', async () => {

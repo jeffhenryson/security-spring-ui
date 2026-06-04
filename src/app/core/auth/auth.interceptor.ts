@@ -20,7 +20,14 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(authReq).pipe(
     catchError((err: HttpErrorResponse) => {
-      if (err.status === 401 && !req.url.includes('/auth/')) {
+      // Só tenta refresh em endpoints não-autenticados do próprio fluxo de auth.
+      // Verificar endpoints específicos em vez de todo /auth/ — endpoints como
+      // /auth/2fa/status são autenticados e devem acionar o refresh normalmente.
+      const isAuthFlowEndpoint =
+        req.url.includes('/auth/refresh') ||
+        req.url.includes('/auth/login') ||
+        req.url.includes('/auth/logout');
+      if (err.status === 401 && !isAuthFlowEndpoint) {
         return from(authService.initSession()).pipe(
           switchMap(() => {
             const newToken = store.accessToken();

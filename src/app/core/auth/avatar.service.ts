@@ -25,7 +25,10 @@ export class AvatarService {
       if (cached) {
         this._avatarDataUrl.set(cached);
       } else if (user.avatarUrl) {
+        this._avatarDataUrl.set(null);
         void this.fetchAndCache(user.avatarUrl, key);
+      } else {
+        this._avatarDataUrl.set(null);
       }
     });
   }
@@ -33,17 +36,9 @@ export class AvatarService {
   private async fetchAndCache(url: string, key: string): Promise<void> {
     try {
       const blob = await firstValueFrom(this.http.get(url, { responseType: 'blob' }));
-      await new Promise<void>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const dataUrl = reader.result as string;
-          localStorage.setItem(key, dataUrl);
-          this._avatarDataUrl.set(dataUrl);
-          resolve();
-        };
-        reader.onerror = () => resolve();
-        reader.readAsDataURL(blob);
-      });
+      const dataUrl = await resizeToDataUrl(blob, 200);
+      localStorage.setItem(key, dataUrl);
+      this._avatarDataUrl.set(dataUrl);
     } catch {
       // Silent fail — shows initials instead
     }
@@ -62,4 +57,25 @@ export class AvatarService {
     localStorage.removeItem(`${AVATAR_KEY_PREFIX}${userId}`);
     this._avatarDataUrl.set(null);
   }
+}
+
+function resizeToDataUrl(blob: Blob, size: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d')!;
+      const scale = Math.max(size / img.width, size / img.height);
+      const sw = size / scale;
+      const sh = size / scale;
+      ctx.drawImage(img, (img.width - sw) / 2, (img.height - sh) / 2, sw, sh, 0, 0, size, size);
+      resolve(canvas.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('load')); };
+    img.src = url;
+  });
 }
