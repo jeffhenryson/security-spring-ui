@@ -29,13 +29,14 @@ const SIDEBAR_COLLAPSE_KEY = 'ss_sidebar_collapsed';
     <aside
       class="flex flex-col h-full sidebar-bg border-r sidebar-border overflow-hidden shrink-0"
       style="transition: width 200ms ease"
-      [style.width]="collapsed() ? '64px' : '240px'"
+      [style.width]="collapsed() ? '64px' : '302px'"
     >
       <!-- Logo + toggle -->
       <div class="flex items-center h-14 px-2 border-b sidebar-border shrink-0">
         @if (!collapsed()) {
-          <span class="flex-1 pl-2 text-sm font-semibold text-cyan-400 tracking-wider truncate">
-            SecuritySpring
+          <span class="flex-1 pl-2 text-sm font-semibold tracking-wider truncate"
+                style="color: var(--cs-primary); font-family: var(--cs-font-primary)">
+            CERNE.SECURITY
           </span>
         }
         <button
@@ -133,8 +134,9 @@ Configurações'
                   no-underline transition-colors duration-150 w-full"
         >
           <div
-            class="w-8 h-8 rounded-full bg-cyan-700 flex items-center justify-center
-                      shrink-0 text-xs font-bold text-white overflow-hidden"
+            class="w-8 h-8 rounded-full flex items-center justify-center shrink-0
+                      text-xs font-bold text-white overflow-hidden"
+            style="background: var(--cs-primary)"
           >
             @if (avatar()) {
               <img [src]="avatar()" alt="avatar" class="w-full h-full object-cover" />
@@ -160,16 +162,17 @@ Configurações'
   styles: [
     `
       .nav-active {
-        color: var(--active-color) !important;
-        background-color: var(--active-bg) !important;
+        color: var(--cs-primary) !important;
+        background-color: var(--cs-primary-10) !important;
       }
       .nav-active mat-icon {
-        color: var(--active-color) !important;
+        color: var(--cs-primary) !important;
       }
 
       aside {
         background: var(--bg-secondary);
         border-color: var(--border-color);
+        font-family: var(--cs-font-primary);
       }
       .sidebar-border {
         border-color: var(--border-color);
@@ -205,15 +208,14 @@ Configurações'
         color: var(--text-primary);
       }
       .user-footer-active {
-        background: var(--active-bg) !important;
+        background: var(--cs-primary-10) !important;
       }
       .user-footer-active .sidebar-username {
-        color: var(--active-color);
+        color: var(--cs-primary);
       }
       .user-footer-active .sidebar-settings-icon {
-        color: var(--active-color);
+        color: var(--cs-primary);
       }
-
     `,
   ],
 })

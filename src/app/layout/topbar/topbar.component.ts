@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router, NavigationEnd, ActivatedRoute, RouterLink } from '@angular/router';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 import { toSignal, takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { filter, map, startWith, interval, switchMap, EMPTY } from 'rxjs';
@@ -14,7 +13,7 @@ import { ThemeService, Theme } from '../../core/theme/theme.service';
   selector: 'app-topbar',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatTooltipModule, MatProgressSpinnerModule, MatIconModule, RouterLink],
+  imports: [MatTooltipModule, MatIconModule, RouterLink],
   styles: [`
     .hdr-btn {
       width: 36px; height: 36px;
@@ -34,10 +33,10 @@ import { ThemeService, Theme } from '../../core/theme/theme.service';
       color: var(--text-primary);
       border-color: var(--border-color);
     }
-    .btn-logout { color: #dc2626; }
+    .btn-logout { color: var(--cs-danger); }
     .btn-logout:hover {
-      background: rgba(220, 38, 38, 0.1);
-      border-color: rgba(220, 38, 38, 0.3);
+      background: var(--cs-danger-10);
+      border-color: rgb(251 12 77 / 0.3);
     }
 
     .hdr-icon-svg {
@@ -52,14 +51,14 @@ import { ThemeService, Theme } from '../../core/theme/theme.service';
     @if (hasPendingEmail()) {
       <div
         class="flex items-center gap-2 px-4 py-1.5 text-xs shrink-0"
-        style="background:#78350f;color:#fef3c7;border-bottom:1px solid #92400e"
+        style="background:rgb(253 114 50/0.08);color:var(--cs-warning);border-bottom:1px solid rgb(253 114 50/0.25)"
       >
         <mat-icon class="!text-[14px] !w-[14px] !h-[14px]">mark_email_unread</mat-icon>
         <span>
           Confirmação pendente para <strong>{{ pendingEmail() }}</strong>.
           Verifique sua caixa de entrada.
         </span>
-        <a routerLink="/app/settings/profile" class="ml-auto underline" style="color:#fde68a">
+        <a routerLink="/app/settings/profile" class="ml-auto underline" style="color:var(--cs-warning)">
           Ver perfil
         </a>
       </div>
@@ -76,7 +75,7 @@ import { ThemeService, Theme } from '../../core/theme/theme.service';
       @if (isDevElevated()) {
         <div
           class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border mr-1"
-          style="border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.08);color:#4ade80"
+          style="border-color:rgb(19 182 215/0.35);background:rgb(19 182 215/0.08);color:var(--cs-success)"
           [matTooltip]="'Acesso DEV ativo — ' + devSecondsLeft() + 's restantes'"
         >
           <span class="inline-block w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse shrink-0"></span>
@@ -115,7 +114,7 @@ import { ThemeService, Theme } from '../../core/theme/theme.service';
         aria-label="Sair"
       >
         @if (loggingOut()) {
-          <mat-spinner diameter="14" />
+          <mat-icon class="cs-spinner" style="font-size:14px;width:14px;height:14px">autorenew</mat-icon>
         } @else {
           <mat-icon class="hdr-icon-svg">logout</mat-icon>
         }
@@ -137,7 +136,7 @@ export class TopbarComponent {
       map(() => {
         let route = this.activatedRoute;
         while (route.firstChild) route = route.firstChild;
-        return (route.snapshot.data['title'] as string | undefined) ?? 'SecuritySpring';
+        return (route.snapshot.data['title'] as string | undefined) ?? 'CERNE.SECURITY';
       }),
     ),
     { initialValue: '' },
