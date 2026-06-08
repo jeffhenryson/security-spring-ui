@@ -30,7 +30,7 @@ import { auditBadgeClass, AUDIT_CRITICAL_EVENTS } from '../audit-log.constants';
         <app-empty-state [message]="emptyMessage()" icon="history" />
       } @else {
         <div class="overflow-x-auto">
-          <table mat-table [dataSource]="rows()" class="w-full" [attr.aria-label]="ariaLabel()">
+          <table mat-table [dataSource]="rows()" class="cs-table w-full" [attr.aria-label]="ariaLabel()">
             <ng-container matColumnDef="timestamp">
               <th mat-header-cell *matHeaderCellDef class="!text-[var(--text-secondary)] !text-xs !pl-6">Data/hora</th>
               <td mat-cell *matCellDef="let l" class="!text-[var(--text-secondary)] !text-xs !pl-6 whitespace-nowrap">
@@ -48,7 +48,7 @@ import { auditBadgeClass, AUDIT_CRITICAL_EVENTS } from '../audit-log.constants';
                     <mat-icon class="!text-[14px] !w-[14px] !h-[14px] text-red-400"
                               matTooltip="Evento crítico de segurança">warning</mat-icon>
                   }
-                  <span class="px-2 py-0.5 rounded text-xs font-mono font-medium {{ badgeClass(l.action) }}">
+                  <span class="{{ badgeClass(l.action) }}">
                     {{ l.action }}
                   </span>
                 </div>

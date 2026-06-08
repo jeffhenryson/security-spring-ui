@@ -59,7 +59,7 @@ import { UserResponse as User } from '../../../core/admin/users-admin.service';
             [matSortDirection]="sortDir()"
             (matSortChange)="sortChange.emit($event)"
             [dataSource]="rows()"
-            class="w-full"
+            class="cs-table w-full"
             aria-label="Tabela de usuários"
           >
             <ng-container matColumnDef="username">
@@ -83,12 +83,7 @@ import { UserResponse as User } from '../../../core/admin/users-admin.service';
             <ng-container matColumnDef="status">
               <th mat-header-cell *matHeaderCellDef class="!text-[var(--text-secondary)] !text-xs">Status</th>
               <td mat-cell *matCellDef="let u">
-                <span
-                  class="px-2 py-0.5 rounded-full text-xs font-medium"
-                  [class]="u.enabled
-                    ? 'bg-emerald-900/80 text-emerald-300'
-                    : 'bg-[var(--border-color)] text-[var(--text-secondary)]'"
-                >
+                <span [class]="u.enabled ? 'cs-badge cs-badge--success' : 'cs-badge cs-badge--default'">
                   {{ u.enabled ? 'Ativo' : 'Inativo' }}
                 </span>
               </td>

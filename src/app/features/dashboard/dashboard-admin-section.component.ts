@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
+import { ButtonComponent } from '../../shared/ui';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuditLogResponse } from '../../core/admin/audit-logs.service';
 import { StatsResponse } from '../../core/admin/stats.service';
@@ -11,7 +11,7 @@ import { DateFormatPipe } from '../../shared/date-format.pipe';
   selector: 'app-dashboard-admin-section',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, MatIconModule, MatButtonModule, MatTooltipModule, DateFormatPipe],
+  imports: [RouterLink, MatIconModule, MatTooltipModule, DateFormatPipe, ButtonComponent],
   template: `
     <!-- Stats cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" aria-live="polite">
@@ -104,10 +104,7 @@ import { DateFormatPipe } from '../../shared/date-format.pipe';
 
     @if (statsError() && !statsLoading()) {
       <div class="mt-3 flex items-center gap-2">
-        <button mat-stroked-button (click)="retryStats.emit()">
-          <mat-icon>refresh</mat-icon>
-          Tentar novamente
-        </button>
+        <app-button variant="outlined" icon="refresh" (clicked)="retryStats.emit()">Tentar novamente</app-button>
       </div>
     }
 
@@ -136,7 +133,7 @@ import { DateFormatPipe } from '../../shared/date-format.pipe';
             <div class="divide-y divide-[var(--border-color)]">
               @for (log of recentActivityWithBadge(); track log.id) {
                 <div class="flex items-center gap-3 px-4 py-3">
-                  <span class="px-2 py-0.5 rounded text-xs font-mono font-medium shrink-0 {{ log.badgeClass }}">
+                  <span class="shrink-0 {{ log.badgeClass }}">
                     {{ log.action }}
                   </span>
                   <span class="text-[var(--text-secondary)] text-sm truncate flex-1">{{ log.who }}</span>
@@ -173,10 +170,10 @@ export class DashboardAdminSectionComponent {
 }
 
 export function badgeFor(action: string): string {
-  if (/TOTP|BACKUP/.test(action)) return 'bg-teal-950 text-teal-300';
-  if (/DELETED|REMOVED|LOCKED|THEFT|FAILED|DISABLED/.test(action)) return 'bg-red-950 text-red-300';
-  if (/CREATED|ENABLED|VERIFIED|REGISTERED|ASSIGNED|CONFIRMED|COMPLETED/.test(action)) return 'bg-green-950 text-green-300';
-  if (/LOGGED_IN|LOGGED_OUT|SESSIONS/.test(action)) return 'bg-blue-950 text-blue-300';
-  if (/RESET|PASSWORD|CHANGE|EMAIL/.test(action)) return 'bg-yellow-950 text-yellow-300';
-  return 'bg-[var(--surface-hover)] text-[var(--text-primary)]';
+  if (/TOTP|BACKUP/.test(action)) return 'cs-badge cs-badge--success';
+  if (/DELETED|REMOVED|LOCKED|THEFT|FAILED|DISABLED/.test(action)) return 'cs-badge cs-badge--danger';
+  if (/CREATED|ENABLED|VERIFIED|REGISTERED|ASSIGNED|CONFIRMED|COMPLETED/.test(action)) return 'cs-badge cs-badge--success';
+  if (/LOGGED_IN|LOGGED_OUT|SESSIONS/.test(action)) return 'cs-badge cs-badge--info';
+  if (/RESET|PASSWORD|CHANGE|EMAIL/.test(action)) return 'cs-badge cs-badge--warning';
+  return 'cs-badge cs-badge--default';
 }
