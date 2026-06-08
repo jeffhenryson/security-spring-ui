@@ -7,11 +7,10 @@ import { MatTableModule } from '@angular/material/table';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { ButtonComponent } from '../../../shared/ui';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AuthStore } from '../../../core/auth/auth.store';
 import { PermissionsAdminService } from '../../../core/admin/permissions-admin.service';
@@ -32,26 +31,25 @@ import { ManageRolePermissionsDialogComponent } from './dialogs/manage-role-perm
     ReactiveFormsModule,
     MatTableModule,
     MatPaginatorModule,
-    MatButtonModule,
     MatIconModule,
     MatChipsModule,
-    MatProgressSpinnerModule,
     MatTooltipModule,
     MatFormFieldModule,
     MatInputModule,
     EmptyStateComponent,
+    ButtonComponent,
   ],
   template: `
     <div class="p-6 max-w-4xl mx-auto flex flex-col gap-6">
       <div class="flex items-center justify-between">
         <h3 class="text-base font-semibold text-[var(--text-primary)] m-0">Roles</h3>
         @if (canCreate()) {
-          <button mat-flat-button (click)="openCreate()"><mat-icon>add</mat-icon> Nova role</button>
+          <app-button icon="add" (clicked)="openCreate()">Nova role</app-button>
         }
       </div>
 
       <!-- Busca -->
-      <mat-form-field appearance="outline" class="w-full !pb-0">
+      <mat-form-field appearance="outline" class="cs-input w-full !pb-0">
         <mat-label>Buscar por nome</mat-label>
         <mat-icon matPrefix class="!text-[var(--text-secondary)]">search</mat-icon>
         <input matInput [formControl]="searchControl" />
@@ -77,7 +75,7 @@ import { ManageRolePermissionsDialogComponent } from './dialogs/manage-role-perm
           <app-empty-state message="Nenhuma role cadastrada." icon="admin_panel_settings" />
         } @else {
           <div class="overflow-x-auto">
-            <table mat-table [dataSource]="paged.rows()" class="w-full" aria-label="Tabela de roles">
+            <table mat-table [dataSource]="paged.rows()" class="cs-table w-full" aria-label="Tabela de roles">
               <ng-container matColumnDef="name">
                 <th
                   mat-header-cell

@@ -11,9 +11,9 @@ import { Router } from '@angular/router';
 
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { ButtonComponent } from '../../../../shared/ui/button/button.component';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
@@ -30,10 +30,10 @@ import { DateFormatPipe } from '../../../../shared/date-format.pipe';
   imports: [
     MatTableModule,
     MatButtonModule,
-    MatProgressSpinnerModule,
     MatIconModule,
     MatTooltipModule,
     DateFormatPipe,
+    ButtonComponent,
   ],
   template: `
     <section class="bg-[var(--surface-color)] border border-[var(--border-color)] rounded-xl p-6">
@@ -46,17 +46,7 @@ import { DateFormatPipe } from '../../../../shared/date-format.pipe';
             Dispositivos com sua conta logada.
           </p>
         </div>
-        <button
-          mat-stroked-button
-          class="!text-red-400 !border-red-900 shrink-0"
-          (click)="terminateAll()"
-          [disabled]="terminatingAll() || loading()"
-        >
-          @if (terminatingAll()) {
-            <mat-spinner diameter="18" class="mr-2" />
-          }
-          Encerrar todas
-        </button>
+        <app-button variant="outlined" [processing]="terminatingAll()" [disabled]="loading()" class="shrink-0" (clicked)="terminateAll()">Encerrar todas</app-button>
       </div>
 
       @if (loading()) {
@@ -77,7 +67,7 @@ import { DateFormatPipe } from '../../../../shared/date-format.pipe';
         </p>
       } @else {
         <div class="overflow-x-auto">
-          <table mat-table [dataSource]="sessionsWithAgent()" class="w-full" aria-label="Sessões ativas">
+          <table mat-table [dataSource]="sessionsWithAgent()" class="cs-table w-full" aria-label="Sessões ativas">
             <ng-container matColumnDef="createdAt">
               <th mat-header-cell *matHeaderCellDef class="!text-[var(--text-secondary)] !text-xs">
                 Criado em
@@ -123,7 +113,7 @@ import { DateFormatPipe } from '../../../../shared/date-format.pipe';
                   (click)="terminateOne(s)"
                 >
                   @if (revokingId() === s.id) {
-                    <mat-spinner diameter="18" />
+                    <mat-icon class="cs-spinner cs-spinner--sm">autorenew</mat-icon>
                   } @else {
                     <mat-icon>logout</mat-icon>
                   }

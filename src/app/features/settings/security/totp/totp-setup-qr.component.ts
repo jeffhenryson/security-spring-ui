@@ -3,14 +3,14 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
+import { ButtonComponent } from '../../../../shared/ui/button/button.component';
 
 @Component({
   selector: 'app-totp-setup-qr',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatProgressSpinnerModule, MatIconModule],
+  imports: [ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule, ButtonComponent],
   template: `
     <div class="flex flex-col gap-5">
       <p class="text-[var(--text-primary)] text-sm m-0">
@@ -32,7 +32,7 @@ import { MatIconModule } from '@angular/material/icon';
       </div>
 
       <form [formGroup]="form" (ngSubmit)="onConfirm()" class="flex flex-col gap-4 max-w-xs">
-        <mat-form-field appearance="outline">
+        <mat-form-field appearance="outline" class="cs-input">
           <mat-label>Código TOTP (6 dígitos)</mat-label>
           <input matInput formControlName="code" maxlength="6" autocomplete="one-time-code" />
         </mat-form-field>
@@ -42,11 +42,8 @@ import { MatIconModule } from '@angular/material/icon';
         }
 
         <div class="flex gap-3">
-          <button mat-flat-button type="submit" [disabled]="loading() || form.invalid">
-            @if (loading()) { <mat-spinner diameter="18" class="mr-2" /> }
-            Confirmar
-          </button>
-          <button mat-stroked-button type="button" (click)="cancelled.emit()">Cancelar</button>
+          <app-button type="submit" [processing]="loading()" [disabled]="form.invalid">Confirmar</app-button>
+          <app-button variant="outlined" (clicked)="cancelled.emit()">Cancelar</app-button>
         </div>
       </form>
     </div>

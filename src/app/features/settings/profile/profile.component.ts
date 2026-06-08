@@ -2,8 +2,6 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } 
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -12,6 +10,7 @@ import { ProfileService } from '../../../core/profile/profile.service';
 import { ProfileAvatarSectionComponent } from './profile-avatar-section.component';
 import { PendingEmailBannerComponent } from './pending-email-banner.component';
 import { ProfilePasswordSectionComponent } from './profile-password-section.component';
+import { ButtonComponent } from '../../../shared/ui';
 
 @Component({
   selector: 'app-profile',
@@ -21,12 +20,11 @@ import { ProfilePasswordSectionComponent } from './profile-password-section.comp
     ReactiveFormsModule,
     MatFormFieldModule,
     MatInputModule,
-    MatButtonModule,
-    MatProgressSpinnerModule,
     MatIconModule,
     ProfileAvatarSectionComponent,
     PendingEmailBannerComponent,
     ProfilePasswordSectionComponent,
+    ButtonComponent,
   ],
   template: `
     <div class="p-6 max-w-2xl mx-auto flex flex-col gap-6">
@@ -63,7 +61,7 @@ import { ProfilePasswordSectionComponent } from './profile-password-section.comp
           <h3 class="text-base font-semibold text-[var(--text-primary)] mt-0 mb-5">Dados do perfil</h3>
 
           <form [formGroup]="profileForm" (ngSubmit)="saveProfile()" class="flex flex-col gap-4">
-            <mat-form-field appearance="outline">
+            <mat-form-field appearance="outline" class="cs-input">
               <mat-label>Usuário</mat-label>
               <input matInput formControlName="username" autocomplete="username" required />
               @if (profileForm.get('username')?.hasError('required') && profileForm.get('username')?.touched) {
@@ -71,7 +69,7 @@ import { ProfilePasswordSectionComponent } from './profile-password-section.comp
               }
             </mat-form-field>
 
-            <mat-form-field appearance="outline">
+            <mat-form-field appearance="outline" class="cs-input">
               <mat-label>Email</mat-label>
               <input matInput type="email" formControlName="email" autocomplete="email" required />
               @if (profileForm.get('email')?.hasError('email') && profileForm.get('email')?.touched) {
@@ -80,7 +78,7 @@ import { ProfilePasswordSectionComponent } from './profile-password-section.comp
               <mat-hint>Ao alterar o email, uma confirmação será enviada para o novo endereço.</mat-hint>
             </mat-form-field>
 
-            <mat-form-field appearance="outline">
+            <mat-form-field appearance="outline" class="cs-input">
               <mat-label>Senha atual</mat-label>
               <input
                 matInput
@@ -103,10 +101,7 @@ import { ProfilePasswordSectionComponent } from './profile-password-section.comp
             }
 
             <div class="flex justify-end">
-              <button mat-flat-button type="submit" [disabled]="saving() || profileForm.invalid">
-                @if (saving()) { <mat-spinner diameter="18" class="mr-2" /> }
-                Salvar perfil
-              </button>
+              <app-button type="submit" [processing]="saving()" [disabled]="profileForm.invalid">Salvar perfil</app-button>
             </div>
           </form>
         </section>

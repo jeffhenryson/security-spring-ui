@@ -9,11 +9,10 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { interval } from 'rxjs';
-import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
+import { ButtonComponent } from '../../../shared/ui';
 import { DevService } from '../../../core/dev/dev.service';
 import { AuthStore } from '../../../core/auth/auth.store';
 
@@ -21,7 +20,7 @@ import { AuthStore } from '../../../core/auth/auth.store';
   selector: 'app-dev-elevation-modal',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatButtonModule, MatFormFieldModule, MatInputModule, MatProgressSpinnerModule, MatIconModule],
+  imports: [MatFormFieldModule, MatInputModule, MatIconModule, ButtonComponent],
   template: `
     <!-- Backdrop -->
     <div
@@ -50,7 +49,7 @@ import { AuthStore } from '../../../core/auth/auth.store';
             <p class="text-sm text-[var(--text-secondary)] mb-4">
               Insira o código atual do seu app autenticador para iniciar a elevação.
             </p>
-            <mat-form-field appearance="outline" class="w-full">
+            <mat-form-field appearance="outline" class="cs-input w-full">
               <mat-label>Código TOTP (6 dígitos)</mat-label>
               <input
                 matInput
@@ -68,22 +67,8 @@ import { AuthStore } from '../../../core/auth/auth.store';
             }
 
             <div class="flex gap-3 mt-2">
-              <button mat-stroked-button class="flex-1" type="button" (click)="dismissed.emit()">
-                Cancelar
-              </button>
-              <button
-                mat-flat-button
-                class="flex-1"
-                type="button"
-                [disabled]="loading() || code1().length !== 6"
-                (click)="submitStep1()"
-              >
-                @if (loading()) {
-                  <mat-spinner diameter="18" />
-                } @else {
-                  Próximo
-                }
-              </button>
+              <app-button variant="outlined" class="flex-1" (clicked)="dismissed.emit()">Cancelar</app-button>
+              <app-button class="flex-1" [processing]="loading()" [disabled]="code1().length !== 6" (clicked)="submitStep1()">Próximo</app-button>
             </div>
           }
 
@@ -113,7 +98,7 @@ import { AuthStore } from '../../../core/auth/auth.store';
                 Tempo expirado. Clique em "Recomeçar" para tentar novamente.
               </p>
             } @else {
-              <mat-form-field appearance="outline" class="w-full">
+              <mat-form-field appearance="outline" class="cs-input w-full">
                 <mat-label>Próximo código TOTP (6 dígitos)</mat-label>
                 <input
                   matInput
@@ -133,26 +118,10 @@ import { AuthStore } from '../../../core/auth/auth.store';
 
             <div class="flex gap-3 mt-2">
               @if (step2Expired()) {
-                <button mat-stroked-button class="flex-1" type="button" (click)="reset()">
-                  Recomeçar
-                </button>
+                <app-button variant="outlined" class="flex-1" (clicked)="reset()">Recomeçar</app-button>
               } @else {
-                <button mat-stroked-button class="flex-1" type="button" (click)="reset()">
-                  Voltar
-                </button>
-                <button
-                  mat-flat-button
-                  class="flex-1"
-                  type="button"
-                  [disabled]="loading() || code2().length !== 6"
-                  (click)="submitStep2()"
-                >
-                  @if (loading()) {
-                    <mat-spinner diameter="18" />
-                  } @else {
-                    Confirmar elevação
-                  }
-                </button>
+                <app-button variant="outlined" class="flex-1" (clicked)="reset()">Voltar</app-button>
+                <app-button class="flex-1" [processing]="loading()" [disabled]="code2().length !== 6" (clicked)="submitStep2()">Confirmar elevação</app-button>
               }
             </div>
           }

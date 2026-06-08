@@ -2,22 +2,20 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatIconModule } from '@angular/material/icon';
+import { ButtonComponent } from '../../../../shared/ui/button/button.component';
 
 @Component({
   selector: 'app-totp-replace',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatProgressSpinnerModule, MatIconModule],
+  imports: [ReactiveFormsModule, MatFormFieldModule, MatInputModule, ButtonComponent],
   template: `
     <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-4 max-w-xs">
       <p class="text-[var(--text-primary)] text-sm m-0">
         Insira o código atual do seu app autenticador para gerar um novo QR code e vincular um novo dispositivo.
       </p>
 
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" class="cs-input">
         <mat-label>Código TOTP atual</mat-label>
         <input matInput formControlName="currentTotpCode" maxlength="6" autocomplete="one-time-code" />
       </mat-form-field>
@@ -27,11 +25,8 @@ import { MatIconModule } from '@angular/material/icon';
       }
 
       <div class="flex gap-3">
-        <button mat-flat-button type="submit" [disabled]="loading() || form.invalid">
-          @if (loading()) { <mat-spinner diameter="18" class="mr-2" /> }
-          Trocar dispositivo
-        </button>
-        <button mat-stroked-button type="button" (click)="cancelled.emit()">Cancelar</button>
+        <app-button type="submit" [processing]="loading()" [disabled]="form.invalid">Trocar dispositivo</app-button>
+        <app-button variant="outlined" (clicked)="cancelled.emit()">Cancelar</app-button>
       </div>
     </form>
   `,

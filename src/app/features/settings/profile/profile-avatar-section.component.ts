@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, ElementRef, effect, inject, input, signal, viewChild } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { ButtonComponent } from '../../../shared/ui';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AvatarService } from '../../../core/auth/avatar.service';
 import { AuthStore } from '../../../core/auth/auth.store';
@@ -10,7 +10,7 @@ import { ProfileService } from '../../../core/profile/profile.service';
   selector: 'app-profile-avatar-section',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatButtonModule, MatIconModule],
+  imports: [MatIconModule, ButtonComponent],
   template: `
     <section class="bg-[var(--surface-color)] border border-[var(--border-color)] rounded-xl p-6">
       <h3 class="text-base font-semibold text-[var(--text-primary)] mt-0 mb-4">Foto de perfil</h3>
@@ -36,19 +36,9 @@ import { ProfileService } from '../../../core/profile/profile.service';
           </div>
         </div>
         <div class="flex flex-col gap-2">
-          <button mat-stroked-button type="button" (click)="triggerFileInput()">
-            <mat-icon>upload</mat-icon>
-            {{ avatar() ? 'Alterar foto' : 'Carregar foto' }}
-          </button>
+          <app-button variant="outlined" icon="upload" (clicked)="triggerFileInput()">{{ avatar() ? 'Alterar foto' : 'Carregar foto' }}</app-button>
           @if (avatar()) {
-            <button
-              mat-stroked-button
-              type="button"
-              class="!text-red-400 !border-red-900"
-              (click)="removeAvatar()"
-            >
-              Remover foto
-            </button>
+            <app-button variant="outlined" (clicked)="removeAvatar()">Remover foto</app-button>
           }
         </div>
       </div>

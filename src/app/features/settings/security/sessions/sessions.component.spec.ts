@@ -4,7 +4,6 @@ import { of } from 'rxjs';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { SessionsComponent, parseAgent } from './sessions.component';
-import { AuthStore } from '../../../../core/auth/auth.store';
 import { SecurityService } from '../../../../core/security/security.service';
 import { SessionInfo } from '../../../../core/auth/models/auth.models';
 

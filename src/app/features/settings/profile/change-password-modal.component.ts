@@ -1,10 +1,9 @@
 import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { ButtonComponent } from '../../../shared/ui';
 
 export interface PasswordConfirmData {
   totpCode?: string;
@@ -15,7 +14,7 @@ export interface PasswordConfirmData {
   selector: 'app-change-password-modal',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatInputModule, MatProgressSpinnerModule],
+  imports: [ReactiveFormsModule, MatCheckboxModule, MatFormFieldModule, MatInputModule, ButtonComponent],
   template: `
     <div
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
@@ -33,7 +32,7 @@ export interface PasswordConfirmData {
           <p class="text-sm text-[var(--text-secondary)] mb-3">
             Insira o código do seu app autenticador para confirmar.
           </p>
-          <mat-form-field appearance="outline" class="w-full">
+          <mat-form-field appearance="outline" class="cs-input w-full">
             <mat-label>Código 2FA (6 dígitos)</mat-label>
             <input
               matInput
@@ -59,18 +58,8 @@ export interface PasswordConfirmData {
         }
 
         <div class="flex gap-3 justify-end">
-          <button mat-stroked-button type="button" (click)="cancelled.emit()">Cancelar</button>
-          <button
-            mat-flat-button
-            type="button"
-            [disabled]="loading() || (totpEnabled() && totpCode().length !== 6)"
-            (click)="submit()"
-          >
-            @if (loading()) {
-              <mat-spinner diameter="18" class="mr-2" />
-            }
-            Confirmar
-          </button>
+          <app-button variant="outlined" (clicked)="cancelled.emit()">Cancelar</app-button>
+          <app-button [processing]="loading()" [disabled]="totpEnabled() && totpCode().length !== 6" (clicked)="submit()">Confirmar</app-button>
         </div>
       </div>
     </div>

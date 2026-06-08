@@ -20,7 +20,7 @@ import { MatInputModule } from '@angular/material/input';
     <h2 mat-dialog-title>Nova role</h2>
     <mat-dialog-content>
       <form [formGroup]="form" id="createRoleForm" (ngSubmit)="submit()" class="pt-2">
-        <mat-form-field appearance="outline" class="w-full">
+        <mat-form-field appearance="outline" class="cs-input w-full">
           <mat-label>Nome da role</mat-label>
           <input matInput formControlName="name" placeholder="Ex: MODERATOR" />
           @if (form.get('name')?.hasError('required') && form.get('name')?.touched) {

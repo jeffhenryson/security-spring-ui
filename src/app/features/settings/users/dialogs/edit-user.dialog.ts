@@ -30,14 +30,14 @@ import { UserResponse } from '../../../../core/admin/users-admin.service';
         (ngSubmit)="submit()"
         class="flex flex-col gap-4 pt-2"
       >
-        <mat-form-field appearance="outline">
+        <mat-form-field appearance="outline" class="cs-input">
           <mat-label>Usuário</mat-label>
           <input matInput formControlName="username" />
           @if (form.get('username')?.hasError('required') && form.get('username')?.touched) {
             <mat-error>Campo obrigatório</mat-error>
           }
         </mat-form-field>
-        <mat-form-field appearance="outline">
+        <mat-form-field appearance="outline" class="cs-input">
           <mat-label>Email (opcional)</mat-label>
           <input matInput type="email" formControlName="email" />
           @if (form.get('email')?.hasError('email') && form.get('email')?.touched) {

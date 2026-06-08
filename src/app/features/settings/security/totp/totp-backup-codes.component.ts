@@ -1,12 +1,12 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { ButtonComponent } from '../../../../shared/ui/button/button.component';
 
 @Component({
   selector: 'app-totp-backup-codes',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatButtonModule, MatIconModule],
+  imports: [MatIconModule, ButtonComponent],
   template: `
     <div class="flex flex-col gap-4">
       <div class="p-4 bg-yellow-950/60 border border-yellow-600/50 rounded-xl">
@@ -28,15 +28,9 @@ import { MatIconModule } from '@angular/material/icon';
       </div>
 
       <div class="flex gap-2 flex-wrap">
-        <button mat-stroked-button (click)="copy.emit()" type="button">
-          <mat-icon>{{ backupCopied() ? 'check' : 'content_copy' }}</mat-icon>
-          {{ backupCopied() ? 'Copiado!' : 'Copiar todos' }}
-        </button>
-        <button mat-stroked-button (click)="download.emit()" type="button">
-          <mat-icon>download</mat-icon>
-          Baixar .txt
-        </button>
-        <button mat-flat-button (click)="done.emit()" type="button">Entendido</button>
+        <app-button variant="outlined" [icon]="backupCopied() ? 'check' : 'content_copy'" (clicked)="copy.emit()">{{ backupCopied() ? 'Copiado!' : 'Copiar todos' }}</app-button>
+        <app-button variant="outlined" icon="download" (clicked)="download.emit()">Baixar .txt</app-button>
+        <app-button (clicked)="done.emit()">Entendido</app-button>
       </div>
     </div>
   `,

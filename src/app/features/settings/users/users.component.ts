@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { ButtonComponent } from '../../../shared/ui';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Sort } from '@angular/material/sort';
@@ -25,20 +25,16 @@ import { downloadCsv, csvEscape } from '../../../shared/csv-export';
   selector: 'app-users',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatButtonModule, MatIconModule, MatTooltipModule, UserTableComponent, UsersFilterBarComponent],
+  imports: [MatIconModule, MatTooltipModule, UserTableComponent, UsersFilterBarComponent, ButtonComponent],
   template: `
     <div class="p-6 max-w-5xl mx-auto flex flex-col gap-6">
       <div class="flex items-center justify-between">
         <h3 class="text-base font-semibold text-[var(--text-primary)] m-0">Usuários</h3>
         <div class="flex gap-2">
           @if (canCreate()) {
-            <button mat-flat-button (click)="openCreate()">
-              <mat-icon>add</mat-icon> Novo usuário
-            </button>
+            <app-button icon="add" (clicked)="openCreate()">Novo usuário</app-button>
           }
-          <button mat-stroked-button (click)="exportCsv()" matTooltip="Exportar página atual como CSV">
-            <mat-icon>download</mat-icon> Exportar CSV
-          </button>
+          <app-button variant="outlined" icon="download" matTooltip="Exportar página atual como CSV" (clicked)="exportCsv()">Exportar CSV</app-button>
         </div>
       </div>
 

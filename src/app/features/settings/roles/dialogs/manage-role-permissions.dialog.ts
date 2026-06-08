@@ -50,7 +50,7 @@ const DEV_ONLY_PERMISSIONS = new Set(['DEV_ROLE_MANAGE', 'DEV_PERMISSION_MANAGE'
 
       @if (canManage()) {
         <div class="flex items-center gap-2 pt-2">
-          <mat-form-field appearance="outline" class="flex-1 !pb-0">
+          <mat-form-field appearance="outline" class="cs-input flex-1 !pb-0">
             <mat-label>Adicionar permissão</mat-label>
             <mat-select [value]="selectedPerm()" (selectionChange)="selectedPerm.set($event.value)">
               @for (p of availablePerms(); track p) {

@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
-import { MatButtonModule } from '@angular/material/button';
+import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { ButtonComponent } from '../ui/button/button.component';
 
 export interface ConfirmDialogData {
   title: string;
@@ -13,20 +13,25 @@ export interface ConfirmDialogData {
   selector: 'app-confirm-dialog',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatDialogModule, MatButtonModule],
+  imports: [MatDialogModule, ButtonComponent],
   template: `
     <h2 mat-dialog-title>{{ data.title }}</h2>
     <mat-dialog-content>
       <p class="text-[var(--text-primary)] m-0">{{ data.message }}</p>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-stroked-button [mat-dialog-close]="false">Cancelar</button>
-      <button mat-flat-button [class.!bg-red-700]="data.danger" [mat-dialog-close]="true">
+      <app-button variant="outlined" (clicked)="close(false)">Cancelar</app-button>
+      <app-button [danger]="data.danger ?? false" (clicked)="close(true)">
         {{ data.confirmLabel ?? 'Confirmar' }}
-      </button>
+      </app-button>
     </mat-dialog-actions>
   `,
 })
 export class ConfirmDialogComponent {
   readonly data: ConfirmDialogData = inject(MAT_DIALOG_DATA);
+  private readonly dialogRef = inject(MatDialogRef<ConfirmDialogComponent>);
+
+  close(result: boolean): void {
+    this.dialogRef.close(result);
+  }
 }

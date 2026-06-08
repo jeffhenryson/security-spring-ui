@@ -3,21 +3,21 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
+import { ButtonComponent } from '../../../../shared/ui/button/button.component';
 
 @Component({
   selector: 'app-totp-regen',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatProgressSpinnerModule, MatIconModule],
+  imports: [ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule, ButtonComponent],
   template: `
     <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-4 max-w-xs">
       <p class="text-[var(--text-primary)] text-sm m-0">
         Confirme sua senha para gerar novos backup codes. Os códigos atuais serão invalidados.
       </p>
 
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" class="cs-input">
         <mat-label>Senha atual</mat-label>
         <input matInput [type]="showPwd() ? 'text' : 'password'" formControlName="currentPassword"
                autocomplete="current-password" />
@@ -33,11 +33,8 @@ import { MatIconModule } from '@angular/material/icon';
       }
 
       <div class="flex gap-3">
-        <button mat-flat-button type="submit" [disabled]="loading() || form.invalid">
-          @if (loading()) { <mat-spinner diameter="18" class="mr-2" /> }
-          Regenerar
-        </button>
-        <button mat-stroked-button type="button" (click)="cancelled.emit()">Cancelar</button>
+        <app-button type="submit" [processing]="loading()" [disabled]="form.invalid">Regenerar</app-button>
+        <app-button variant="outlined" (clicked)="cancelled.emit()">Cancelar</app-button>
       </div>
     </form>
   `,

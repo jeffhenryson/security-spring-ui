@@ -63,7 +63,7 @@ import { PERMISSIONS, ROLES } from '../../../../core/rbac/permissions.constants'
 
       @if (canAssign()) {
         <div class="flex items-center gap-2 pt-2">
-          <mat-form-field appearance="outline" class="flex-1 !pb-0">
+          <mat-form-field appearance="outline" class="cs-input flex-1 !pb-0">
             <mat-label>Adicionar role</mat-label>
             <mat-select [value]="selectedRole()" (selectionChange)="selectedRole.set($event.value)">
               @for (r of availableRoles(); track r) {

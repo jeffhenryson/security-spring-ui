@@ -1,13 +1,12 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
+import { ButtonComponent } from '../../../../shared/ui/button/button.component';
 
 @Component({
   selector: 'app-totp-idle',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatButtonModule, MatProgressSpinnerModule, MatIconModule],
+  imports: [MatIconModule, ButtonComponent],
   template: `
     <div class="flex items-center gap-2 mb-5">
       @if (totpEnabled() === true) {
@@ -35,21 +34,12 @@ import { MatIconModule } from '@angular/material/icon';
 
     <div class="flex flex-wrap gap-3">
       @if (totpEnabled() !== true) {
-        <button mat-flat-button (click)="setupRequested.emit()" [disabled]="loading()">
-          @if (loading()) { <mat-spinner diameter="18" class="mr-2" /> }
-          Configurar 2FA
-        </button>
+        <app-button [processing]="loading()" (clicked)="setupRequested.emit()">Configurar 2FA</app-button>
       }
       @if (totpEnabled() === true) {
-        <button mat-stroked-button (click)="replaceRequested.emit()" [disabled]="loading()">
-          Trocar dispositivo
-        </button>
-        <button mat-stroked-button (click)="regenRequested.emit()" [disabled]="loading()">
-          Regenerar backup codes
-        </button>
-        <button mat-stroked-button (click)="disableRequested.emit()">
-          Desabilitar 2FA
-        </button>
+        <app-button variant="outlined" [disabled]="loading()" (clicked)="replaceRequested.emit()">Trocar dispositivo</app-button>
+        <app-button variant="outlined" [disabled]="loading()" (clicked)="regenRequested.emit()">Regenerar backup codes</app-button>
+        <app-button variant="outlined" (clicked)="disableRequested.emit()">Desabilitar 2FA</app-button>
       }
     </div>
   `,

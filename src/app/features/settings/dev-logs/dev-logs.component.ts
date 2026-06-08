@@ -6,7 +6,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
+import { ButtonComponent } from '../../../shared/ui';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AuditLogsService, AuditLogResponse, AuditLogFilters } from '../../../core/admin/audit-logs.service';
@@ -27,8 +27,8 @@ const ALL_ACTIONS = Object.keys(AUDIT_ACTION_COLORS).sort();
     MatInputModule,
     MatSelectModule,
     MatIconModule,
-    MatButtonModule,
     MatTooltipModule,
+    ButtonComponent,
     AuditLogTableComponent,
   ],
   template: `
@@ -40,26 +40,18 @@ const ALL_ACTIONS = Object.keys(AUDIT_ACTION_COLORS).sort();
             DEV
           </span>
         </div>
-        <button
-          mat-stroked-button
-          (click)="exportCsv()"
-          [disabled]="paged.rows().length === 0"
-          matTooltip="Exportar página atual como CSV"
-        >
-          <mat-icon>download</mat-icon>
-          Exportar CSV
-        </button>
+        <app-button variant="outlined" icon="download" [disabled]="paged.rows().length === 0" matTooltip="Exportar página atual como CSV" (clicked)="exportCsv()">Exportar CSV</app-button>
       </div>
 
       <!-- Filtros -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <mat-form-field appearance="outline" class="w-full !pb-0">
+        <mat-form-field appearance="outline" class="cs-input w-full !pb-0">
           <mat-label>Filtrar por usuário</mat-label>
           <mat-icon matPrefix class="!text-[var(--text-secondary)]">person_search</mat-icon>
           <input matInput [formControl]="userIdControl" placeholder="Ex: admin" />
         </mat-form-field>
 
-        <mat-form-field appearance="outline" class="w-full !pb-0">
+        <mat-form-field appearance="outline" class="cs-input w-full !pb-0">
           <mat-label>Tipo de evento</mat-label>
           <mat-icon matPrefix class="!text-[var(--text-secondary)]">filter_list</mat-icon>
           <mat-select [formControl]="actionControl">

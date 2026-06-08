@@ -2,9 +2,8 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
+import { ButtonComponent } from '../../../shared/ui';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthStore } from '../../../core/auth/auth.store';
@@ -21,18 +20,17 @@ import { ChangePasswordModalComponent, PasswordConfirmData } from './change-pass
     ReactiveFormsModule,
     MatFormFieldModule,
     MatInputModule,
-    MatButtonModule,
-    MatProgressSpinnerModule,
     MatIconModule,
     PasswordStrengthComponent,
     ChangePasswordModalComponent,
+    ButtonComponent,
   ],
   template: `
     <section class="bg-[var(--surface-color)] border border-[var(--border-color)] rounded-xl p-6">
       <h3 class="text-base font-semibold text-[var(--text-primary)] mt-0 mb-5">Trocar senha</h3>
 
       <form [formGroup]="passwordForm" (ngSubmit)="changePassword()" class="flex flex-col gap-4">
-        <mat-form-field appearance="outline">
+        <mat-form-field appearance="outline" class="cs-input">
           <mat-label>Senha atual</mat-label>
           <input matInput [type]="showCurrentPwd() ? 'text' : 'password'"
                  formControlName="currentPassword" autocomplete="current-password" required />
@@ -46,7 +44,7 @@ import { ChangePasswordModalComponent, PasswordConfirmData } from './change-pass
           }
         </mat-form-field>
 
-        <mat-form-field appearance="outline">
+        <mat-form-field appearance="outline" class="cs-input">
           <mat-label>Nova senha</mat-label>
           <input matInput [type]="showNewPwd() ? 'text' : 'password'"
                  formControlName="newPassword" autocomplete="new-password" required />
@@ -61,7 +59,7 @@ import { ChangePasswordModalComponent, PasswordConfirmData } from './change-pass
         </mat-form-field>
         <app-password-strength [password]="passwordForm.get('newPassword')?.value ?? null" />
 
-        <mat-form-field appearance="outline">
+        <mat-form-field appearance="outline" class="cs-input">
           <mat-label>Confirmar nova senha</mat-label>
           <input matInput [type]="showConfirmPwd() ? 'text' : 'password'"
                  formControlName="confirmPassword" autocomplete="new-password" required />
@@ -80,10 +78,7 @@ import { ChangePasswordModalComponent, PasswordConfirmData } from './change-pass
         }
 
         <div class="flex justify-end">
-          <button mat-flat-button type="submit" [disabled]="saving() || passwordForm.invalid">
-            @if (saving()) { <mat-spinner diameter="18" class="mr-2" /> }
-            Alterar senha
-          </button>
+          <app-button type="submit" [processing]="saving()" [disabled]="passwordForm.invalid">Alterar senha</app-button>
         </div>
       </form>
     </section>

@@ -5,9 +5,8 @@ import { firstValueFrom } from 'rxjs';
 import { MatTableModule } from '@angular/material/table';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { ButtonComponent } from '../../../shared/ui';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -27,9 +26,8 @@ import { EmptyStateComponent } from '../../../shared/empty-state/empty-state.com
     MatTableModule,
     MatFormFieldModule,
     MatInputModule,
-    MatButtonModule,
     MatIconModule,
-    MatProgressSpinnerModule,
+    ButtonComponent,
     MatTooltipModule,
     EmptyStateComponent,
   ],
@@ -39,26 +37,20 @@ import { EmptyStateComponent } from '../../../shared/empty-state/empty-state.com
         <h3 class="text-base font-semibold text-[var(--text-primary)] m-0">Permissões</h3>
         @if (canCreate()) {
           <form [formGroup]="createForm" (ngSubmit)="create()" class="flex items-center gap-2 flex-wrap">
-            <mat-form-field appearance="outline" class="flex-1 sm:w-[220px] !pb-0">
+            <mat-form-field appearance="outline" class="cs-input flex-1 sm:w-[220px] !pb-0">
               <mat-label>Nome da permissão</mat-label>
               <input matInput formControlName="name" placeholder="Ex: REPORT_READ" required />
               @if (createForm.get('name')?.hasError('required') && createForm.get('name')?.touched) {
                 <mat-error>Campo obrigatório</mat-error>
               }
             </mat-form-field>
-            <button mat-flat-button type="submit" [disabled]="loading() || submitting() || createForm.invalid">
-              @if (submitting()) {
-                <mat-spinner diameter="18" />
-              } @else {
-                <mat-icon>add</mat-icon>
-              }
-            </button>
+            <app-button type="submit" [processing]="submitting()" [disabled]="loading() || createForm.invalid" [icon]="submitting() ? '' : 'add'"></app-button>
           </form>
         }
       </div>
 
       <!-- Busca client-side -->
-      <mat-form-field appearance="outline" class="w-full !pb-0">
+      <mat-form-field appearance="outline" class="cs-input w-full !pb-0">
         <mat-label>Buscar permissão</mat-label>
         <mat-icon matPrefix class="!text-[var(--text-secondary)]">search</mat-icon>
         <input matInput [formControl]="searchControl" placeholder="Ex: USER_READ" />
@@ -82,7 +74,7 @@ import { EmptyStateComponent } from '../../../shared/empty-state/empty-state.com
         } @else if (filtered().length === 0) {
           <app-empty-state [message]="emptyMessage()" icon="key" />
         } @else {
-          <table mat-table [dataSource]="filtered()" class="w-full" aria-label="Tabela de permissões">
+          <table mat-table [dataSource]="filtered()" class="cs-table w-full" aria-label="Tabela de permissões">
             <ng-container matColumnDef="name">
               <th mat-header-cell *matHeaderCellDef class="!text-[var(--text-secondary)] !text-xs !pl-6">
                 Nome

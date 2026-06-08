@@ -11,11 +11,11 @@ import { interval } from 'rxjs';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { ButtonComponent } from '../../../shared/ui';
 import { HttpErrorResponse } from '@angular/common/http';
 import { UsersAdminService } from '../../../core/admin/users-admin.service';
 import { DevService } from '../../../core/dev/dev.service';
@@ -37,8 +37,8 @@ type Step = 'form' | 'totp1' | 'totp2' | 'done';
     MatButtonModule,
     MatIconModule,
     MatCheckboxModule,
-    MatProgressSpinnerModule,
     PasswordStrengthComponent,
+    ButtonComponent,
   ],
   template: `
     <div class="p-6 max-w-lg mx-auto flex flex-col gap-6">
@@ -74,7 +74,7 @@ type Step = 'form' | 'totp1' | 'totp2' | 'done';
 
         @case ('form') {
           <form [formGroup]="form" (ngSubmit)="goToTotp1()" class="flex flex-col gap-4">
-            <mat-form-field appearance="outline">
+            <mat-form-field appearance="outline" class="cs-input">
               <mat-label>Usuário</mat-label>
               <input matInput formControlName="username" autocomplete="off" />
               @if (form.get('username')?.hasError('required') && form.get('username')?.touched) {
@@ -82,12 +82,12 @@ type Step = 'form' | 'totp1' | 'totp2' | 'done';
               }
             </mat-form-field>
 
-            <mat-form-field appearance="outline">
+            <mat-form-field appearance="outline" class="cs-input">
               <mat-label>Email (opcional)</mat-label>
               <input matInput type="email" formControlName="email" autocomplete="off" />
             </mat-form-field>
 
-            <mat-form-field appearance="outline">
+            <mat-form-field appearance="outline" class="cs-input">
               <mat-label>Senha</mat-label>
               <input matInput [type]="showPwd() ? 'text' : 'password'"
                      formControlName="password" autocomplete="new-password" />
@@ -107,9 +107,7 @@ type Step = 'form' | 'totp1' | 'totp2' | 'done';
               Confirmo que estou criando um usuário DEV com acesso privilegiado
             </mat-checkbox>
 
-            <button mat-flat-button type="submit" [disabled]="form.invalid">
-              Continuar para confirmação 2FA
-            </button>
+            <app-button type="submit" [disabled]="form.invalid">Continuar para confirmação 2FA</app-button>
           </form>
         }
 
@@ -118,7 +116,7 @@ type Step = 'form' | 'totp1' | 'totp2' | 'done';
             <p class="text-sm text-[var(--text-secondary)] m-0">
               Insira o código <strong>atual</strong> do seu app autenticador para confirmar a criação.
             </p>
-            <mat-form-field appearance="outline">
+            <mat-form-field appearance="outline" class="cs-input">
               <mat-label>Código TOTP (6 dígitos)</mat-label>
               <input matInput maxlength="6" inputmode="numeric" autocomplete="one-time-code"
                      [value]="code1()" (input)="code1.set($any($event.target).value)"
@@ -128,11 +126,8 @@ type Step = 'form' | 'totp1' | 'totp2' | 'done';
               <p class="text-red-400 text-sm m-0">{{ error() }}</p>
             }
             <div class="flex gap-3">
-              <button mat-stroked-button type="button" (click)="reset()">Voltar</button>
-              <button mat-flat-button type="button"
-                      [disabled]="loading() || code1().length !== 6" (click)="submitTotp1()">
-                @if (loading()) { <mat-spinner diameter="18" /> } @else { Próximo }
-              </button>
+              <app-button variant="outlined" (clicked)="reset()">Voltar</app-button>
+              <app-button [processing]="loading()" [disabled]="code1().length !== 6" (clicked)="submitTotp1()">Próximo</app-button>
             </div>
           </div>
         }
@@ -154,9 +149,9 @@ type Step = 'form' | 'totp1' | 'totp2' | 'done';
             </div>
             @if (step2Expired()) {
               <p class="text-red-400 text-sm m-0">Tempo expirado. Comece novamente.</p>
-              <button mat-stroked-button (click)="reset()">Recomeçar</button>
+              <app-button variant="outlined" (clicked)="reset()">Recomeçar</app-button>
             } @else {
-              <mat-form-field appearance="outline">
+              <mat-form-field appearance="outline" class="cs-input">
                 <mat-label>Próximo código TOTP (6 dígitos)</mat-label>
                 <input matInput maxlength="6" inputmode="numeric" autocomplete="one-time-code"
                        [value]="code2()" (input)="code2.set($any($event.target).value)"
@@ -166,11 +161,8 @@ type Step = 'form' | 'totp1' | 'totp2' | 'done';
                 <p class="text-red-400 text-sm m-0">{{ error() }}</p>
               }
               <div class="flex gap-3">
-                <button mat-stroked-button type="button" (click)="reset()">Cancelar</button>
-                <button mat-flat-button type="button"
-                        [disabled]="loading() || code2().length !== 6" (click)="submitTotp2()">
-                  @if (loading()) { <mat-spinner diameter="18" /> } @else { Criar usuário DEV }
-                </button>
+                <app-button variant="outlined" (clicked)="reset()">Cancelar</app-button>
+                <app-button [processing]="loading()" [disabled]="code2().length !== 6" (clicked)="submitTotp2()">Criar usuário DEV</app-button>
               </div>
             }
           </div>
@@ -181,7 +173,7 @@ type Step = 'form' | 'totp1' | 'totp2' | 'done';
             <mat-icon>check_circle</mat-icon>
             <span>Usuário <strong>{{ createdUsername() }}</strong> criado com ROLE_DEV.</span>
           </div>
-          <button mat-stroked-button (click)="reset()">Criar outro</button>
+          <app-button variant="outlined" (clicked)="reset()">Criar outro</app-button>
         }
       }
     </div>

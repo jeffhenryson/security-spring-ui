@@ -19,12 +19,12 @@ export interface UserFilter {
   imports: [ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatIconModule],
   template: `
     <div class="flex flex-wrap gap-3">
-      <mat-form-field appearance="outline" class="flex-1 min-w-[200px] !pb-0">
+      <mat-form-field appearance="outline" class="cs-input flex-1 min-w-[200px] !pb-0">
         <mat-label>Buscar por nome ou email</mat-label>
         <mat-icon matPrefix class="!text-[var(--text-secondary)]">search</mat-icon>
         <input matInput [formControl]="searchControl" />
       </mat-form-field>
-      <mat-form-field appearance="outline" class="w-40 !pb-0">
+      <mat-form-field appearance="outline" class="cs-input w-40 !pb-0">
         <mat-label>Status</mat-label>
         <mat-select [formControl]="statusControl">
           <mat-option value="">Todos</mat-option>

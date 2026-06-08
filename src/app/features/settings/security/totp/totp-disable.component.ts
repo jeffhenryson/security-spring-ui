@@ -3,8 +3,8 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
+import { ButtonComponent } from '../../../../shared/ui/button/button.component';
 
 export interface DisableTotpData { currentPassword: string; code: string; }
 
@@ -12,14 +12,14 @@ export interface DisableTotpData { currentPassword: string; code: string; }
   selector: 'app-totp-disable',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatProgressSpinnerModule, MatIconModule],
+  imports: [ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule, ButtonComponent],
   template: `
     <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-4 max-w-xs">
       <p class="text-[var(--text-primary)] text-sm m-0">
         Informe sua senha atual e o código TOTP para desabilitar o 2FA.
       </p>
 
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" class="cs-input">
         <mat-label>Senha atual</mat-label>
         <input matInput [type]="showPwd() ? 'text' : 'password'" formControlName="currentPassword"
                autocomplete="current-password" />
@@ -30,7 +30,7 @@ export interface DisableTotpData { currentPassword: string; code: string; }
         </button>
       </mat-form-field>
 
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" class="cs-input">
         <mat-label>Código TOTP</mat-label>
         <input matInput formControlName="code" maxlength="6" autocomplete="one-time-code" />
       </mat-form-field>
@@ -40,12 +40,8 @@ export interface DisableTotpData { currentPassword: string; code: string; }
       }
 
       <div class="flex gap-3">
-        <button mat-flat-button type="submit" class="!bg-red-700 hover:!bg-red-600"
-                [disabled]="loading() || form.invalid">
-          @if (loading()) { <mat-spinner diameter="18" class="mr-2" /> }
-          Desabilitar 2FA
-        </button>
-        <button mat-stroked-button type="button" (click)="cancelled.emit()">Cancelar</button>
+        <app-button type="submit" [processing]="loading()" [disabled]="form.invalid">Desabilitar 2FA</app-button>
+        <app-button variant="outlined" (clicked)="cancelled.emit()">Cancelar</app-button>
       </div>
     </form>
   `,

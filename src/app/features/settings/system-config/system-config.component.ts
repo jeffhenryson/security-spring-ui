@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatButtonModule } from '@angular/material/button';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
+import { ButtonComponent } from '../../../shared/ui';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AppConfigService } from '../../../core/config/app-config.service';
 import { AppConfigStore } from '../../../core/config/app-config.store';
@@ -32,7 +32,7 @@ const CONFIG_ITEMS: ConfigItem[] = [
   selector: 'app-system-config',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatSlideToggleModule, MatButtonModule, MatProgressSpinnerModule, MatIconModule],
+  imports: [MatSlideToggleModule, MatButtonModule, MatIconModule, ButtonComponent],
   template: `
     <div class="p-6 max-w-2xl mx-auto flex flex-col gap-6">
       <div class="flex items-center justify-between">
@@ -43,10 +43,7 @@ const CONFIG_ITEMS: ConfigItem[] = [
           </p>
         </div>
         @if (hasPending()) {
-          <button mat-flat-button (click)="applyAll()" [disabled]="saving()">
-            @if (saving()) { <mat-spinner diameter="16" class="mr-2" /> }
-            Aplicar {{ pendingCount() }} {{ pendingCount() === 1 ? 'alteração' : 'alterações' }}
-          </button>
+          <app-button [processing]="saving()" (clicked)="applyAll()">Aplicar {{ pendingCount() }} {{ pendingCount() === 1 ? 'alteração' : 'alterações' }}</app-button>
         }
       </div>
 
@@ -89,6 +86,7 @@ const CONFIG_ITEMS: ConfigItem[] = [
                   <span class="text-xs text-[var(--text-secondary)]">{{ item.description }}</span>
                 </div>
                 <mat-slide-toggle
+                  class="cs-toggle"
                   [checked]="item.value"
                   [disabled]="saving()"
                   (change)="markPending(item.key, $event.checked)"

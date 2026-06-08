@@ -3,7 +3,6 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { HttpErrorResponse } from '@angular/common/http';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ApiConfiguration } from '../../../api/api-configuration';
 import { StatsService } from '../../../core/admin/stats.service';
@@ -19,7 +18,6 @@ import { DevStatsSectionComponent, DevStats } from './dev-stats-section.componen
   imports: [
     MatIconModule,
     MatButtonModule,
-    MatProgressSpinnerModule,
     MatTooltipModule,
     DevHealthSectionComponent,
     DevStatsSectionComponent,
@@ -42,7 +40,7 @@ import { DevStatsSectionComponent, DevStats } from './dev-stats-section.componen
           matTooltip="Recarregar"
         >
           @if (loading()) {
-            <mat-spinner diameter="18" />
+            <mat-icon class="cs-spinner cs-spinner--sm">autorenew</mat-icon>
           } @else {
             <mat-icon>refresh</mat-icon>
           }

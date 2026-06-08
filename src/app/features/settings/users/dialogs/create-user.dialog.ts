@@ -36,7 +36,7 @@ import { PasswordStrengthComponent } from '../../../../shared/password-strength/
         (ngSubmit)="submit()"
         class="flex flex-col gap-4 pt-2"
       >
-        <mat-form-field appearance="outline">
+        <mat-form-field appearance="outline" class="cs-input">
           <mat-label>Usuário</mat-label>
           <input matInput formControlName="username" autocomplete="off" />
           @if (form.get('username')?.hasError('required') && form.get('username')?.touched) {
@@ -44,7 +44,7 @@ import { PasswordStrengthComponent } from '../../../../shared/password-strength/
           }
         </mat-form-field>
 
-        <mat-form-field appearance="outline">
+        <mat-form-field appearance="outline" class="cs-input">
           <mat-label>Email (opcional)</mat-label>
           <input matInput type="email" formControlName="email" autocomplete="off" />
           @if (form.get('email')?.hasError('email') && form.get('email')?.touched) {
@@ -52,7 +52,7 @@ import { PasswordStrengthComponent } from '../../../../shared/password-strength/
           }
         </mat-form-field>
 
-        <mat-form-field appearance="outline">
+        <mat-form-field appearance="outline" class="cs-input">
           <mat-label>Senha</mat-label>
           <input
             matInput
@@ -77,7 +77,7 @@ import { PasswordStrengthComponent } from '../../../../shared/password-strength/
 
         <app-password-strength [password]="form.get('password')?.value ?? null" />
 
-        <mat-form-field appearance="outline">
+        <mat-form-field appearance="outline" class="cs-input">
           <mat-label>Roles (opcional)</mat-label>
           <mat-select formControlName="roles" multiple>
             @for (r of data.availableRoles; track r) {
