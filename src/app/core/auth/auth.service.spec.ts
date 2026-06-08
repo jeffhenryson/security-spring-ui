@@ -4,7 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { Router } from '@angular/router';
 import { AuthService } from './auth.service';
 import { AuthStore } from './auth.store';
-import { REFRESH_TOKEN_KEY, SESSION_MARKER_KEY } from './auth.constants';
+import { SESSION_MARKER_KEY } from './auth.constants';
 import { environment } from '../../../environments/environment';
 
 const API = environment.apiUrl;

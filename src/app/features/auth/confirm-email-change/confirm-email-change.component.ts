@@ -1,14 +1,14 @@
 import { ChangeDetectionStrategy, Component, inject, signal, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../../core/auth/auth.service';
 
 @Component({
   selector: 'app-confirm-email-change',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, MatButtonModule, MatProgressSpinnerModule],
+  imports: [RouterLink, MatButtonModule, MatIconModule],
   template: `
     <div class="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
       <div
@@ -17,7 +17,7 @@ import { AuthService } from '../../../core/auth/auth.service';
         <h1 class="text-2xl font-bold text-[var(--active-color)] mb-6">Confirmar Troca de Email</h1>
 
         @if (loading()) {
-          <mat-spinner diameter="40" class="mx-auto" />
+          <mat-icon class="cs-spinner cs-spinner--lg mx-auto" style="color:var(--active-color)">autorenew</mat-icon>
         } @else if (success()) {
           <div class="text-emerald-400 mb-4">Email atualizado com sucesso!</div>
           <a routerLink="/app/settings/profile" mat-flat-button>Ir para o perfil</a>

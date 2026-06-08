@@ -3,10 +3,9 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { ButtonComponent } from '../../../shared/ui';
 import { AuthService } from '../../../core/auth/auth.service';
 import { GoogleAuthService } from '../../../core/auth/google-auth.service';
 import { AppConfigStore } from '../../../core/config/app-config.store';
@@ -26,9 +25,8 @@ const LOCKOUT_STORAGE_KEY = 'ss_login_lockout';
     RouterLink,
     MatFormFieldModule,
     MatInputModule,
-    MatButtonModule,
-    MatProgressSpinnerModule,
     MatIconModule,
+    ButtonComponent,
   ],
   template: `
     <div class="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
@@ -39,7 +37,7 @@ const LOCKOUT_STORAGE_KEY = 'ss_login_lockout';
         </div>
 
         <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
-          <mat-form-field appearance="outline">
+          <mat-form-field appearance="outline" class="cs-input">
             <mat-label>Usuário</mat-label>
             <input
               matInput
@@ -53,7 +51,7 @@ const LOCKOUT_STORAGE_KEY = 'ss_login_lockout';
             }
           </mat-form-field>
 
-          <mat-form-field appearance="outline">
+          <mat-form-field appearance="outline" class="cs-input">
             <mat-label>Senha</mat-label>
             <input
               matInput
@@ -89,18 +87,12 @@ const LOCKOUT_STORAGE_KEY = 'ss_login_lockout';
             </p>
           }
 
-          <button
-            mat-flat-button
+          <app-button
             type="submit"
-            [disabled]="loading() || form.invalid || lockedUntil() > 0"
+            [processing]="loading()"
+            [disabled]="form.invalid || lockedUntil() > 0"
             class="w-full mt-2"
-          >
-            @if (loading()) {
-              <mat-spinner diameter="20" class="inline" />
-            } @else {
-              Entrar
-            }
-          </button>
+          >Entrar</app-button>
         </form>
 
         @if (showGoogleLogin()) {

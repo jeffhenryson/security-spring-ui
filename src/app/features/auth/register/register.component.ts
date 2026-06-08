@@ -5,14 +5,13 @@ import { RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../../core/auth/auth.service';
 import { GoogleAuthService } from '../../../core/auth/google-auth.service';
 import { AppConfigStore } from '../../../core/config/app-config.store';
 import { passwordMatchValidator, passwordPolicyValidator } from '../../../core/validators/password.validators';
 import { PasswordStrengthComponent } from '../../../shared/password-strength/password-strength.component';
+import { ButtonComponent } from '../../../shared/ui';
 
 @Component({
   selector: 'app-register',
@@ -23,10 +22,9 @@ import { PasswordStrengthComponent } from '../../../shared/password-strength/pas
     RouterLink,
     MatFormFieldModule,
     MatInputModule,
-    MatButtonModule,
-    MatProgressSpinnerModule,
     MatIconModule,
     PasswordStrengthComponent,
+    ButtonComponent,
   ],
   template: `
     <div class="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
@@ -49,7 +47,7 @@ import { PasswordStrengthComponent } from '../../../shared/password-strength/pas
           </div>
         } @else {
           <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
-            <mat-form-field appearance="outline">
+            <mat-form-field appearance="outline" class="cs-input">
               <mat-label>Usuário</mat-label>
               <input
                 matInput
@@ -63,7 +61,7 @@ import { PasswordStrengthComponent } from '../../../shared/password-strength/pas
               }
             </mat-form-field>
 
-            <mat-form-field appearance="outline">
+            <mat-form-field appearance="outline" class="cs-input">
               <mat-label>Email</mat-label>
               <input
                 matInput
@@ -78,7 +76,7 @@ import { PasswordStrengthComponent } from '../../../shared/password-strength/pas
               }
             </mat-form-field>
 
-            <mat-form-field appearance="outline">
+            <mat-form-field appearance="outline" class="cs-input">
               <mat-label>Senha</mat-label>
               <input
                 matInput
@@ -101,7 +99,7 @@ import { PasswordStrengthComponent } from '../../../shared/password-strength/pas
             </mat-form-field>
             <app-password-strength [password]="form.get('password')?.value ?? null" />
 
-            <mat-form-field appearance="outline">
+            <mat-form-field appearance="outline" class="cs-input">
               <mat-label>Confirmar senha</mat-label>
               <input
                 matInput
@@ -128,18 +126,12 @@ import { PasswordStrengthComponent } from '../../../shared/password-strength/pas
               <p class="text-red-400 text-sm text-center">{{ errorMsg() }}</p>
             }
 
-            <button
-              mat-flat-button
+            <app-button
               type="submit"
-              [disabled]="loading() || form.invalid"
+              [processing]="loading()"
+              [disabled]="form.invalid"
               class="w-full mt-2"
-            >
-              @if (loading()) {
-                <mat-spinner diameter="20" class="inline" />
-              } @else {
-                Criar conta
-              }
-            </button>
+            >Criar conta</app-button>
           </form>
 
           @if (showGoogleRegister()) {

@@ -4,8 +4,9 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../../core/auth/auth.service';
+import { ButtonComponent } from '../../../shared/ui';
 
 type ViewState = 'loading' | 'success' | 'manual-form';
 
@@ -19,7 +20,8 @@ type ViewState = 'loading' | 'success' | 'manual-form';
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
-    MatProgressSpinnerModule,
+    MatIconModule,
+    ButtonComponent,
   ],
   template: `
     <div class="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
@@ -30,7 +32,7 @@ type ViewState = 'loading' | 'success' | 'manual-form';
 
         @switch (viewState()) {
           @case ('loading') {
-            <mat-spinner diameter="40" class="mx-auto" />
+            <mat-icon class="cs-spinner cs-spinner--lg mx-auto" style="color:var(--active-color)">autorenew</mat-icon>
             <p class="text-[var(--text-secondary)] text-sm mt-4">Verificando seu email...</p>
           }
 
@@ -65,7 +67,7 @@ type ViewState = 'loading' | 'success' | 'manual-form';
               (ngSubmit)="onManualSubmit()"
               class="flex flex-col gap-4 text-left"
             >
-              <mat-form-field appearance="outline">
+              <mat-form-field appearance="outline" class="cs-input">
                 <mat-label>Código de verificação</mat-label>
                 <input matInput formControlName="code" />
               </mat-form-field>
@@ -74,35 +76,22 @@ type ViewState = 'loading' | 'success' | 'manual-form';
                 <p class="text-red-400 text-sm text-center">{{ formErrorMsg() }}</p>
               }
 
-              <button
-                mat-flat-button
+              <app-button
                 type="submit"
-                [disabled]="loadingManual() || form.invalid"
+                [processing]="loadingManual()"
+                [disabled]="form.invalid"
                 class="w-full"
-              >
-                @if (loadingManual()) {
-                  <mat-spinner diameter="20" class="inline" />
-                } @else {
-                  Verificar
-                }
-              </button>
+              >Verificar</app-button>
             </form>
 
             <div class="mt-4 border-t border-[var(--border-color)] pt-4">
               <p class="text-[var(--text-secondary)] text-sm mb-2">Não recebeu o código?</p>
-              <button
-                mat-stroked-button
-                (click)="resendCode()"
-                [disabled]="loadingResend() || resendSent()"
-              >
-                @if (loadingResend()) {
-                  <mat-spinner diameter="16" class="inline" />
-                } @else if (resendSent()) {
-                  Código reenviado!
-                } @else {
-                  Reenviar código
-                }
-              </button>
+              <app-button
+                variant="outlined"
+                [processing]="loadingResend()"
+                [disabled]="resendSent()"
+                (clicked)="resendCode()"
+              >{{ resendSent() ? 'Código reenviado!' : 'Reenviar código' }}</app-button>
               @if (resendError()) {
                 <p class="text-red-400 text-sm mt-2">{{ resendError() }}</p>
               }

@@ -4,8 +4,9 @@ import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../../core/auth/auth.service';
+import { ButtonComponent } from '../../../shared/ui';
 
 @Component({
   selector: 'app-two-factor',
@@ -17,7 +18,8 @@ import { AuthService } from '../../../core/auth/auth.service';
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
-    MatProgressSpinnerModule,
+    MatIconModule,
+    ButtonComponent,
   ],
   template: `
     <div class="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
@@ -42,7 +44,7 @@ import { AuthService } from '../../../core/auth/auth.service';
           </div>
 
           <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
-            <mat-form-field appearance="outline">
+            <mat-form-field appearance="outline" class="cs-input">
               <mat-label>{{ useBackupCode() ? 'Código de backup' : 'Código TOTP' }}</mat-label>
               <input
                 matInput
@@ -55,7 +57,7 @@ import { AuthService } from '../../../core/auth/auth.service';
                 (input)="onCodeInput($event)"
               />
               @if (loading()) {
-                <mat-spinner matSuffix diameter="18" class="mr-2" />
+                <mat-icon matSuffix class="cs-spinner cs-spinner--sm mr-2">autorenew</mat-icon>
               }
             </mat-form-field>
 
@@ -63,18 +65,12 @@ import { AuthService } from '../../../core/auth/auth.service';
               <p class="text-red-400 text-sm text-center">{{ errorMsg() }}</p>
             }
 
-            <button
-              mat-flat-button
+            <app-button
               type="submit"
-              [disabled]="loading() || form.invalid"
+              [processing]="loading()"
+              [disabled]="form.invalid"
               class="w-full mt-2"
-            >
-              @if (loading()) {
-                <mat-spinner diameter="20" class="inline" />
-              } @else {
-                Verificar
-              }
-            </button>
+            >Verificar</app-button>
           </form>
 
           <div class="mt-6 flex flex-col items-center gap-2 text-sm">
