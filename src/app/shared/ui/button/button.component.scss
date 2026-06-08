@@ -1,0 +1,170 @@
+@keyframes cs-btn-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.cs-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 6px;
+  border: none;
+  font-family: var(--cs-font-primary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  transition: background 150ms, color 150ms, border-color 150ms, opacity 150ms;
+  white-space: nowrap;
+  position: relative;
+
+  // ── Contained ──────────────────────────────────────────────────────────
+  &--contained {
+    background: var(--cs-primary);
+    color: #ffffff;
+
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, var(--cs-primary) 85%, #000);
+    }
+    &:active:not(:disabled) {
+      background: color-mix(in srgb, var(--cs-primary) 70%, #000);
+    }
+  }
+
+  // ── Outlined ───────────────────────────────────────────────────────────
+  &--outlined {
+    background: transparent;
+    border: 1.5px solid var(--cs-primary);
+    color: var(--cs-primary);
+
+    &:hover:not(:disabled) {
+      background: var(--cs-primary-10);
+    }
+    &:active:not(:disabled) {
+      background: var(--cs-primary-20);
+    }
+  }
+
+  // ── Texted ─────────────────────────────────────────────────────────────
+  &--texted {
+    background: transparent;
+    border: none;
+    color: var(--cs-primary);
+
+    &:hover:not(:disabled) {
+      background: var(--cs-primary-10);
+    }
+    &:active:not(:disabled) {
+      background: var(--cs-primary-20);
+    }
+  }
+
+  // ── Split ──────────────────────────────────────────────────────────────
+  &--split {
+    background: var(--cs-primary);
+    color: #ffffff;
+    padding-right: 8px;
+
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, var(--cs-primary) 85%, #000);
+    }
+  }
+
+  // ── Icon only ──────────────────────────────────────────────────────────
+  &--icon {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-muted);
+
+    &:hover:not(:disabled) {
+      background: var(--cs-primary-10);
+      color: var(--cs-primary);
+    }
+  }
+
+  &--icon-circle {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-muted);
+
+    &:hover:not(:disabled) {
+      background: var(--cs-primary-10);
+      color: var(--cs-primary);
+    }
+  }
+
+  // ── Disabled ───────────────────────────────────────────────────────────
+  &--disabled,
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  // ── Processing ─────────────────────────────────────────────────────────
+  &--processing {
+    cursor: wait;
+    pointer-events: none;
+  }
+
+  // ── Elementos internos ─────────────────────────────────────────────────
+  &__spinner {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    animation: cs-btn-spin 0.75s linear infinite;
+  }
+
+  &__icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  &__divider {
+    width: 1px;
+    height: 20px;
+    background: rgb(255 255 255 / 0.4);
+    margin: 0 4px;
+  }
+
+  &__split-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+// ── Danger override — funciona em cima de qualquer variante ────────────────
+.cs-btn--danger {
+  background: var(--cs-danger);
+  border-color: var(--cs-danger);
+  color: #fff;
+
+  &:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--cs-danger) 85%, #000);
+    border-color: color-mix(in srgb, var(--cs-danger) 85%, #000);
+  }
+  &:active:not(:disabled) {
+    background: color-mix(in srgb, var(--cs-danger) 70%, #000);
+  }
+  &:focus-visible { outline-color: var(--cs-danger); }
+}
+
+.cs-btn--outlined.cs-btn--danger {
+  background: transparent;
+  border-color: var(--cs-danger);
+  color: var(--cs-danger);
+
+  &:hover:not(:disabled) { background: var(--cs-danger-10); }
+  &:active:not(:disabled) { background: color-mix(in srgb, var(--cs-danger-10) 200%, transparent); }
+}

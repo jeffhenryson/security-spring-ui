@@ -57,6 +57,34 @@ html.theme-light {
   --text-muted: #94a3b8;
 }
 
+// ─── CERNE.SECURITY Design Tokens ────────────────────────────────────────────
+// Prefixo --cs- para não conflitar com os tokens existentes do projeto
+html,
+html.theme-light {
+  --cs-primary: #5E62FF;
+  --cs-secondary: #9966FF;
+  --cs-success: #13B6D7;
+  --cs-warning: #FD7232;
+  --cs-danger: #FB0C4D;
+  --cs-neutral-100: #F2F2F2;
+  --cs-neutral-300: #CCCCCC;
+  --cs-neutral-500: #808080;
+  --cs-neutral-800: #333333;
+  --cs-neutral-900: #000000;
+  --cs-font-primary: 'Inter', sans-serif;
+  --cs-font-secondary: 'Incursive Sans', sans-serif;
+
+  // Variantes de opacidade úteis
+  --cs-primary-10: rgb(94 98 255 / 0.1);
+  --cs-primary-20: rgb(94 98 255 / 0.2);
+  --cs-danger-10: rgb(251 12 77 / 0.1);
+  --cs-danger-20: rgb(251 12 77 / 0.2);
+  --cs-success-10: rgb(19 182 215 / 0.1);
+  --cs-success-20: rgb(19 182 215 / 0.2);
+  --cs-warning-10: rgb(253 114 50 / 0.1);
+  --cs-warning-20: rgb(253 114 50 / 0.2);
+}
+
 // ─── Base ─────────────────────────────────────────────────────────────────────
 body {
   color-scheme: dark;
@@ -101,6 +129,170 @@ html.theme-light body {
 .mat-mdc-snack-bar-container {
   --mdc-snackbar-container-color: var(--surface-color);
   --mdc-snackbar-supporting-text-color: var(--text-primary);
+}
+
+// ─── CERNE inputs ─────────────────────────────────────────────────────────────
+.mat-mdc-form-field.cs-input .mdc-outlined-text-field--outlined {
+  --mdc-outlined-text-field-outline-color: var(--cs-neutral-300);
+  --mdc-outlined-text-field-hover-outline-color: var(--cs-neutral-500);
+  --mdc-outlined-text-field-focus-outline-color: var(--cs-primary);
+  --mdc-outlined-text-field-error-outline-color: var(--cs-danger);
+  --mdc-outlined-text-field-error-focus-outline-color: var(--cs-danger);
+  --mdc-outlined-text-field-input-text-color: var(--text-primary);
+  --mdc-outlined-text-field-label-text-color: var(--text-secondary);
+  --mdc-outlined-text-field-focus-label-text-color: var(--cs-primary);
+  --mdc-outlined-text-field-error-label-text-color: var(--cs-danger);
+  --mdc-outlined-text-field-disabled-outline-color: var(--cs-neutral-300);
+  font-family: var(--cs-font-primary);
+}
+
+// ─── CERNE switch ─────────────────────────────────────────────────────────────
+.mat-mdc-slide-toggle.cs-toggle {
+  --mdc-switch-selected-track-color: var(--cs-primary);
+  --mdc-switch-selected-hover-track-color: color-mix(in srgb, var(--cs-primary) 85%, #000);
+  --mdc-switch-selected-pressed-track-color: color-mix(in srgb, var(--cs-primary) 70%, #000);
+  --mdc-switch-selected-focus-track-color: var(--cs-primary);
+  --mdc-switch-selected-handle-color: #ffffff;
+  --mdc-switch-selected-hover-handle-color: #ffffff;
+  --mdc-switch-selected-pressed-handle-color: #ffffff;
+  --mdc-switch-selected-focus-handle-color: #ffffff;
+  --mdc-switch-selected-focus-state-layer-color: var(--cs-primary);
+  --mdc-switch-selected-hover-state-layer-color: var(--cs-primary);
+  --mdc-switch-selected-pressed-state-layer-color: var(--cs-primary);
+  --mdc-switch-unselected-track-color: var(--cs-neutral-300);
+  --mdc-switch-unselected-hover-track-color: var(--cs-neutral-500);
+  --mdc-switch-unselected-handle-color: #ffffff;
+}
+
+// ─── CERNE table ──────────────────────────────────────────────────────────────
+.cs-table {
+  width: 100%;
+  font-family: var(--cs-font-primary);
+
+  .mat-mdc-header-row {
+    background: var(--surface-color) !important;
+    border-bottom: 1.5px solid var(--border-color);
+  }
+
+  .mat-mdc-header-cell {
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: none;
+    padding: 0 12px;
+  }
+
+  .mat-mdc-row {
+    border-bottom: 1px solid var(--border-color);
+    transition: background 120ms;
+
+    &:hover {
+      background: var(--surface-hover) !important;
+    }
+    &:last-of-type {
+      border-bottom: none;
+    }
+  }
+
+  .mat-mdc-cell {
+    color: var(--text-primary);
+    font-size: 14px;
+    padding: 0 12px;
+    border-bottom: none;
+  }
+
+  .mat-mdc-row.cs-row--active {
+    background: var(--cs-primary-10) !important;
+    .mat-mdc-cell { color: var(--cs-primary); }
+  }
+}
+
+.cs-table-paginator {
+  border-top: 1.5px solid var(--border-color);
+  background: var(--surface-color);
+  font-family: var(--cs-font-primary);
+  color: var(--text-secondary);
+}
+
+// ─── cs-badge ─────────────────────────────────────────────────────────────────
+.cs-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+
+  &--success {
+    background: var(--cs-success-10);
+    color: var(--cs-success);
+    border: 1px solid var(--cs-success-20);
+  }
+  &--danger {
+    background: var(--cs-danger-10);
+    color: var(--cs-danger);
+    border: 1px solid var(--cs-danger-20);
+  }
+  &--warning {
+    background: var(--cs-warning-10);
+    color: var(--cs-warning);
+    border: 1px solid var(--cs-warning-20);
+  }
+  &--info {
+    background: var(--cs-primary-10);
+    color: var(--cs-primary);
+    border: 1px solid var(--cs-primary-20);
+  }
+  &--default {
+    background: var(--surface-hover);
+    color: var(--text-secondary);
+    border: 1px solid transparent;
+  }
+}
+
+// ─── MatSelect CERNE override ─────────────────────────────────────────────────
+.mat-mdc-select-panel {
+  background: var(--surface-color) !important;
+  border: 1px solid var(--border-color) !important;
+}
+.mat-mdc-option {
+  color: var(--text-secondary) !important;
+}
+.mat-mdc-option:hover,
+.mat-mdc-option.mdc-list-item--selected {
+  background: var(--surface-hover) !important;
+}
+.mat-mdc-option.mdc-list-item--selected .mdc-list-item__primary-text {
+  color: var(--cs-primary) !important;
+}
+
+// ─── MatCheckbox CERNE override ───────────────────────────────────────────────
+.mat-mdc-checkbox .mdc-checkbox__background {
+  border-color: var(--border-color) !important;
+}
+.mat-mdc-checkbox.mat-mdc-checkbox-checked .mdc-checkbox__background {
+  background: var(--cs-primary) !important;
+  border-color: var(--cs-primary) !important;
+}
+
+// ─── Spinner utilitário ───────────────────────────────────────────────────────
+@keyframes cs-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.cs-spinner {
+  display: block;
+  animation: cs-spin 0.75s linear infinite;
+  user-select: none;
+
+  &--sm { font-size: 18px; width: 18px; height: 18px; }
+  &--lg { font-size: 40px; width: 40px; height: 40px; }
 }
 
 // ─── Skeleton shimmer ─────────────────────────────────────────────────────────

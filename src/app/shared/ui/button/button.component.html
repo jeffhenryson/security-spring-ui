@@ -1,0 +1,34 @@
+<button
+  [type]="type"
+  [disabled]="isDisabled"
+  [class]="'cs-btn cs-btn--' + variant"
+  [class.cs-btn--danger]="danger"
+  [class.cs-btn--processing]="processing"
+  [class.cs-btn--disabled]="isDisabled"
+  (click)="handleClick()"
+>
+  @if (processing) {
+    <mat-icon class="cs-btn__spinner">autorenew</mat-icon>
+  }
+
+  @if (icon && iconPosition === 'left' && variant !== 'split') {
+    <mat-icon class="cs-btn__icon">{{ icon }}</mat-icon>
+  }
+
+  @if (variant !== 'icon' && variant !== 'icon-circle') {
+    <span class="cs-btn__label">
+      <ng-content />
+    </span>
+  } @else {
+    <mat-icon>{{ icon }}</mat-icon>
+  }
+
+  @if (variant === 'split') {
+    <span class="cs-btn__divider"></span>
+    <mat-icon class="cs-btn__split-icon">{{ icon ?? 'arrow_drop_down' }}</mat-icon>
+  }
+
+  @if (icon && iconPosition === 'right' && variant !== 'split') {
+    <mat-icon class="cs-btn__icon">{{ icon }}</mat-icon>
+  }
+</button>
